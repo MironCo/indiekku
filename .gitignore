@@ -1,0 +1,61 @@
+deploy.sh
+
+# Go binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+unity-launcher
+sdd-server-build.x86_64
+
+# Go build artifacts
+*.test
+*.out
+go.work
+
+# Dependency directories
+vendor/
+
+# Go workspace file
+go.work.sum
+
+# Environment variables
+.env
+.env.local
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Keep the folder but ignore contents
+sdd-server-build/*
+!sdd-server-build/.gitkeep
+
+# Logs
+*.log
+server.log
+
+# Docker
+.dockerignore
+
+# Temporary files
+tmp/
+temp/
+
+# SSH keys (just in case)
+*.pem
+*.key
+*-login
