@@ -19,10 +19,9 @@ func main() {
 		}
 	}
 
-	// Create the Docker run command with dynamic port mapping
-	cmd := exec.Command("docker", "run", "--rm", "-d", // Add -d here!
+	cmd := exec.Command("docker", "run", "--rm", "-d",
+		"--network", "host", // This will make Unity bind to both IPv4 and IPv6
 		"--name", containerName,
-		"-p", port+":7777",
 		"unity-server",
 		"./sdd-server-build.x86_64", "-port", "7777")
 
