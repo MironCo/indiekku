@@ -32,6 +32,8 @@ func main() {
 		runServe()
 	case "shutdown":
 		runShutdown()
+	case "logs":
+		runLogs()
 	case "start":
 		runStart()
 	case "stop":
@@ -48,8 +50,9 @@ func main() {
 func printUsage() {
 	fmt.Println("indiekku - Game server orchestration tool")
 	fmt.Println("\nUsage:")
-	fmt.Println("  indiekku serve        Start the API server")
+	fmt.Println("  indiekku serve        Start the API server (runs in background)")
 	fmt.Println("  indiekku shutdown     Stop the API server")
+	fmt.Println("  indiekku logs         View API server logs")
 	fmt.Println("  indiekku start [port] Start a game server container")
 	fmt.Println("  indiekku stop <name>  Stop a game server container")
 	fmt.Println("  indiekku ps           List running game server containers")
@@ -62,22 +65,29 @@ func runServe() {
 		os.Exit(1)
 	}
 
-	// Check if --daemon or -d flag is present
-	daemon := false
+	// Check if this is the forked daemon process (internal flag)
+	isDaemonProcess := false
 	apiPort := defaultAPIPort
 
 	for i := 2; i < len(os.Args); i++ {
-		if os.Args[i] == "--daemon" || os.Args[i] == "-d" {
-			daemon = true
+		if os.Args[i] == "__daemon__" {
+			isDaemonProcess = true
 		} else {
 			apiPort = os.Args[i]
 		}
 	}
 
-	// If daemon mode, fork and exit parent
-	if daemon {
-		// Re-run ourselves without the daemon flag
-		args := []string{os.Args[0], "serve"}
+	// If this is NOT the daemon process, fork and exit
+	if !isDaemonProcess {
+		// Check if server is already running
+		if _, err := os.Stat(pidFile); err == nil {
+			fmt.Println("Error: API server is already running")
+			fmt.Println("Use 'indiekku shutdown' to stop it first")
+			os.Exit(1)
+		}
+
+		// Re-run ourselves with internal daemon flag
+		args := []string{os.Args[0], "serve", "__daemon__"}
 		if apiPort != defaultAPIPort {
 			args = append(args, apiPort)
 		}
@@ -99,14 +109,15 @@ func runServe() {
 			os.Exit(1)
 		}
 
-		fmt.Printf("✓ indiekku API server started in background\n")
+		fmt.Printf("✓ indiekku API server started\n")
 		fmt.Printf("  PID: %d\n", cmd.Process.Pid)
 		fmt.Printf("  Port: %s\n", apiPort)
-		fmt.Printf("  Logs: indiekku.log\n")
-		fmt.Printf("\nTo stop: ./indiekku shutdown\n")
+		fmt.Printf("\nUse 'indiekku logs' to view logs\n")
+		fmt.Printf("Use 'indiekku shutdown' to stop\n")
 		return
 	}
 
+	// This is the daemon process, start the server
 	fmt.Println("Starting indiekku API server...")
 
 	// Save PID to file
@@ -263,5 +274,31 @@ func runPs() {
 			s.PlayerCount,
 			s.StartedAt.Format("2006-01-02 15:04:05"),
 		)
+	}
+}
+
+func runLogs() {
+	// Check if log file exists
+	if _, err := os.Stat("indiekku.log"); os.IsNotExist(err) {
+		fmt.Println("No log file found. Has the server been started?")
+		os.Exit(1)
+	}
+
+	// Use tail -f to follow the logs (Unix-like systems)
+	// On Windows this won't work, but for a server tool that's okay
+	cmd := exec.Command("tail", "-f", "indiekku.log")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+
+	fmt.Println("Following indiekku logs (Ctrl+C to exit)...")
+	if err := cmd.Run(); err != nil {
+		// Fallback: just print the file
+		content, readErr := os.ReadFile("indiekku.log")
+		if readErr != nil {
+			fmt.Printf("Failed to read logs: %v\n", readErr)
+			os.Exit(1)
+		}
+		fmt.Print(string(content))
 	}
 }

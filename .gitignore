@@ -1,5 +1,6 @@
 deploy.sh
 /indiekku
+bin/
 
 # Go binaries
 *.exe
