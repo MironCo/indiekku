@@ -5,8 +5,8 @@ GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
 GOGET=$(GOCMD) get
 GOMOD=$(GOCMD) mod
-BINARY_NAME=sdd-server
-BINARY_PATH=./cmd/sdd-server
+BINARY_NAME=indiekku
+BINARY_PATH=./cmd/indiekku
 
 .PHONY: all build clean test deps tidy run
 

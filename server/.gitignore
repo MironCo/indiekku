@@ -1,0 +1,26 @@
+# Ignore Unity server builds
+*.x86_64
+*.exe
+*.app
+*.apk
+
+# Unity build data folders
+*_Data/
+*_BackUpThisFolder_ButDontShipItWithYourGame/
+
+# Unity libraries
+UnityPlayer.so
+UnityPlayer.dll
+UnityCrashHandler*
+
+# Mono/IL2CPP
+MonoBleedingEdge/
+*_BackUpThisFolder_ButDontShipItWithYourGame/
+
+# Server logs
+*.log
+*.txt
+
+# Keep this folder in git
+!.gitignore
+!README.md
