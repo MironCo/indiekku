@@ -48,6 +48,10 @@ sdd-server-build/*
 # Logs
 *.log
 server.log
+indiekku.log
+
+# PID files
+*.pid
 
 # Docker
 .dockerignore
