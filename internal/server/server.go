@@ -35,6 +35,5 @@ func FindBinary(serverDir string) (string, error) {
 			}
 		}
 	}
-
-	return "", fmt.Errorf("no game server binary found in %s/ (looking for *.x86_64 or *.exe)", serverDir)
+	return "", fmt.Errorf("no game server binary found in %s: (looking for *.x86_64 or *.exe)", serverDir)
 }

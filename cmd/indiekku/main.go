@@ -56,6 +56,12 @@ func printUsage() {
 }
 
 func runServe() {
+	_, err := server.FindBinary(server.DefaultServerDir)
+	if err != nil {
+		fmt.Printf("Failed to find server binary: %v\n", err)
+		os.Exit(1)
+	}
+
 	// Check if --daemon or -d flag is present
 	daemon := false
 	apiPort := defaultAPIPort
