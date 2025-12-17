@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	DefaultServerDir = "server"
+	DefaultServerDir = "game_server"
 )
 
 // FindBinary scans the server directory for game server executables

@@ -76,9 +76,16 @@ func runServe() {
 			args = append(args, apiPort)
 		}
 
+		// Create log file for daemon output
+		logFile, err := os.OpenFile("indiekku.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+		if err != nil {
+			fmt.Printf("Failed to create log file: %v\n", err)
+			os.Exit(1)
+		}
+
 		cmd := exec.Command(args[0], args[1:]...)
-		cmd.Stdout = nil
-		cmd.Stderr = nil
+		cmd.Stdout = logFile
+		cmd.Stderr = logFile
 		cmd.Stdin = nil
 
 		if err := cmd.Start(); err != nil {
@@ -89,6 +96,7 @@ func runServe() {
 		fmt.Printf("✓ indiekku API server started in background\n")
 		fmt.Printf("  PID: %d\n", cmd.Process.Pid)
 		fmt.Printf("  Port: %s\n", apiPort)
+		fmt.Printf("  Logs: indiekku.log\n")
 		fmt.Printf("\nTo stop: ./indiekku shutdown\n")
 		return
 	}

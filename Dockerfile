@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the Unity build
-COPY server/ /app/
+COPY game_server/ /app/
 WORKDIR /app
 
 # Expose the default Mirror port
