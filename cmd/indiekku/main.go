@@ -9,10 +9,10 @@ import (
 )
 
 const (
-	defaultPort      = "7777"
-	imageName        = "unity-server"
-	containerPrefix  = "unity-server-"
-	serverDir        = "server"
+	defaultPort     = "7777"
+	imageName       = "unity-server"
+	containerPrefix = "unity-server-"
+	serverDir       = "server"
 )
 
 func main() {

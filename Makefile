@@ -10,7 +10,7 @@ BINARY_PATH=./cmd/indiekku
 
 .PHONY: all build clean test deps tidy run
 
-all: deps build
+all: build
 
 build:
 	$(GOBUILD) -o $(BINARY_NAME) $(BINARY_PATH)
@@ -23,7 +23,7 @@ test:
 	$(GOTEST) -v ./...
 
 deps:
-	$(GOGET) -d ./...
+	$(GOMOD) download
 
 tidy:
 	$(GOMOD) tidy
