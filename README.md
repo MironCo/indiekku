@@ -24,7 +24,7 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/indiekku.git
+git clone https://github.com/MironCo/indiekku
 cd indiekku
 
 # Build the binary
