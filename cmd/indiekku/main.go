@@ -59,6 +59,13 @@ func printUsage() {
 }
 
 func runServe() {
+	// Check if Docker is installed
+	if err := docker.CheckDockerInstalled(); err != nil {
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Check if server binary exists
 	_, err := server.FindBinary(server.DefaultServerDir)
 	if err != nil {
 		fmt.Printf("Failed to find server binary: %v\n", err)

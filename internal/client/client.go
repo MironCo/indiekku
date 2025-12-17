@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	defaultTimeout = 30 * time.Second
+	defaultTimeout = 5 * time.Minute
 )
 
 // Client handles HTTP requests to the indiekku API

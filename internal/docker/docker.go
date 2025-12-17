@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 )
@@ -9,6 +10,15 @@ const (
 	DefaultImageName       = "unity-server"
 	DefaultContainerPrefix = "unity-server-"
 )
+
+// CheckDockerInstalled checks if Docker is installed and running
+func CheckDockerInstalled() error {
+	cmd := exec.Command("docker", "version")
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("Docker is not installed or not running. Please install Docker and start the Docker daemon")
+	}
+	return nil
+}
 
 // ImageExists checks if a Docker image exists locally
 func ImageExists(imageName string) bool {
