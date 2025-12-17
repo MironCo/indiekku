@@ -7,17 +7,19 @@ GOGET=$(GOCMD) get
 GOMOD=$(GOCMD) mod
 BINARY_NAME=indiekku
 BINARY_PATH=./cmd/indiekku
+BIN_DIR=bin
 
 .PHONY: all build clean test deps tidy run
 
 all: build
 
 build:
-	$(GOBUILD) -o $(BINARY_NAME) $(BINARY_PATH)
+	mkdir -p $(BIN_DIR)
+	$(GOBUILD) -o $(BIN_DIR)/$(BINARY_NAME) $(BINARY_PATH)
 
 clean:
 	$(GOCLEAN)
-	rm -f $(BINARY_NAME)
+	rm -rf $(BIN_DIR)
 
 test:
 	$(GOTEST) -v ./...
@@ -29,7 +31,7 @@ tidy:
 	$(GOMOD) tidy
 
 run: build
-	./$(BINARY_NAME)
+	./$(BIN_DIR)/$(BINARY_NAME)
 
 install:
 	$(GOBUILD) -o $(GOPATH)/bin/$(BINARY_NAME) $(BINARY_PATH)
