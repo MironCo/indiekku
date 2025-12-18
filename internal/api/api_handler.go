@@ -179,6 +179,9 @@ func (h *ApiHandler) SetupRouter() *gin.Engine {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
+	// Web UI (no auth required - auth handled in the UI itself)
+	r.GET("/", h.ServeWebUI)
+
 	// API routes (auth required)
 	api := r.Group("/api/v1")
 	api.Use(security.AuthMiddleware(h.apiKey))
