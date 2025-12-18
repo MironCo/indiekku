@@ -5,11 +5,13 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	"indiekku/internal/api"
 	"indiekku/internal/client"
 	"indiekku/internal/docker"
+	"indiekku/internal/security"
 	"indiekku/internal/server"
 	"indiekku/internal/state"
 )
@@ -72,6 +74,26 @@ func runServe() {
 	if err != nil {
 		fmt.Printf("Failed to find server binary: %v\n", err)
 		os.Exit(1)
+	}
+
+	// Ensure API key exists (generate if first run)
+	apiKey, isNew, err := security.EnsureAPIKey()
+	if err != nil {
+		fmt.Printf("Failed to ensure API key: %v\n", err)
+		os.Exit(1)
+	}
+
+	if isNew {
+		fmt.Printf("\n" + strings.Repeat("=", 70) + "\n")
+		fmt.Printf("  NEW API KEY GENERATED\n")
+		fmt.Printf(strings.Repeat("=", 70) + "\n\n")
+		fmt.Printf("  Your API Key: %s\n\n", apiKey)
+		fmt.Printf("  This key has been saved to: .indiekku_apikey\n")
+		fmt.Printf("  Keep this key secure - you'll need it to authenticate API requests.\n\n")
+		fmt.Printf("  Example usage:\n")
+		fmt.Printf("    curl -H \"Authorization: Bearer %s\" \\\n", apiKey)
+		fmt.Printf("         http://localhost:8080/api/v1/servers\n\n")
+		fmt.Printf(strings.Repeat("=", 70) + "\n\n")
 	}
 
 	// Check if this is the forked daemon process (internal flag)
@@ -143,6 +165,13 @@ func runServe() {
 	}
 	defer os.Remove(pidFile)
 
+	// Load API key for authentication
+	loadedAPIKey, err := security.LoadAPIKey()
+	if err != nil {
+		fmt.Printf("Failed to load API key: %v\n", err)
+		os.Exit(1)
+	}
+
 	// Initialize state handler
 	stateHandler := state.NewStateHandler()
 
@@ -151,6 +180,7 @@ func runServe() {
 		stateHandler,
 		server.DefaultServerDir,
 		docker.DefaultImageName,
+		loadedAPIKey,
 	)
 
 	// Setup and run the router

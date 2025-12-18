@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"indiekku/internal/docker"
+	"indiekku/internal/security"
 	"indiekku/internal/server"
 	"indiekku/internal/state"
 
@@ -17,14 +18,16 @@ type ApiHandler struct {
 	stateManager *state.StateHandler
 	serverDir    string
 	imageName    string
+	apiKey       string
 }
 
 // NewHandler creates a new API handler
-func NewAPIHandler(stateManager *state.StateHandler, serverDir, imageName string) *ApiHandler {
+func NewAPIHandler(stateManager *state.StateHandler, serverDir, imageName, apiKey string) *ApiHandler {
 	return &ApiHandler{
 		stateManager: stateManager,
 		serverDir:    serverDir,
 		imageName:    imageName,
+		apiKey:       apiKey,
 	}
 }
 
@@ -171,19 +174,20 @@ func (h *ApiHandler) Heartbeat(c *gin.Context) {
 func (h *ApiHandler) SetupRouter() *gin.Engine {
 	r := gin.Default()
 
-	// API routes
+	// Health check (no auth required)
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+
+	// API routes (auth required)
 	api := r.Group("/api/v1")
+	api.Use(security.AuthMiddleware(h.apiKey))
 	{
 		api.POST("/servers/start", h.StartServer)
 		api.DELETE("/servers/:name", h.StopServer)
 		api.GET("/servers", h.ListServers)
 		api.POST("/heartbeat", h.Heartbeat)
 	}
-
-	// Health check
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
-	})
 
 	return r
 }
