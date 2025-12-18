@@ -1,6 +1,7 @@
 # indiekku
 
 ![Tests](https://github.com/MironCo/indiekku/actions/workflows/test.yml/badge.svg)
+[![Known Vulnerabilities](https://snyk.io/test/github/mironco/indiekku/badge.svg)](https://snyk.io/test/github/mironco/indiekku)
 
 **indiekku** is a lightweight game server orchestration tool for Unity multiplayer games. It manages Docker containers running Unity dedicated servers, providing a simple CLI and REST API for server lifecycle management.
 
