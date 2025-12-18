@@ -190,6 +190,7 @@ func (h *ApiHandler) SetupRouter() *gin.Engine {
 		api.DELETE("/servers/:name", h.StopServer)
 		api.GET("/servers", h.ListServers)
 		api.POST("/heartbeat", h.Heartbeat)
+		api.POST("/upload", h.UploadRelease)
 	}
 
 	return r
