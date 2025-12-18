@@ -39,3 +39,12 @@ jobs:
       with:
         args: --severity-threshold=critical --fail-on=upgradable
       continue-on-error: true
+
+    - name: Run Snyk Code (SAST)
+      uses: snyk/actions/golang@master
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        command: code test
+        args: --severity-threshold=high
+      continue-on-error: true

@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
+	"time"
 
 	"indiekku/internal/api"
 	"indiekku/internal/client"
@@ -93,8 +95,15 @@ func runServe() {
 			os.Exit(1)
 		}
 
-		// Re-run ourselves with internal daemon flag
-		args := []string{os.Args[0], "serve", "__daemon__"}
+		// Get the actual executable path (not from os.Args)
+		execPath, err := os.Executable()
+		if err != nil {
+			fmt.Printf("Failed to get executable path: %v\n", err)
+			os.Exit(1)
+		}
+
+		// Build args using the resolved executable path
+		args := []string{"serve", "__daemon__"}
 		if apiPort != defaultAPIPort {
 			args = append(args, apiPort)
 		}
@@ -106,7 +115,7 @@ func runServe() {
 			os.Exit(1)
 		}
 
-		cmd := exec.Command(args[0], args[1:]...)
+		cmd := exec.Command(execPath, args...)
 		cmd.Stdout = logFile
 		cmd.Stderr = logFile
 		cmd.Stdin = nil
@@ -291,21 +300,33 @@ func runLogs() {
 		os.Exit(1)
 	}
 
-	// Use tail -f to follow the logs (Unix-like systems)
-	// On Windows this won't work, but for a server tool that's okay
-	cmd := exec.Command("tail", "-f", "indiekku.log")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
+	// Open and follow the file in Go (cross-platform)
+	file, err := os.Open("indiekku.log")
+	if err != nil {
+		fmt.Printf("Failed to open log file: %v\n", err)
+		os.Exit(1)
+	}
+	defer file.Close()
 
-	fmt.Println("Following indiekku logs (Ctrl+C to exit)...")
-	if err := cmd.Run(); err != nil {
-		// Fallback: just print the file
-		content, readErr := os.ReadFile("indiekku.log")
-		if readErr != nil {
-			fmt.Printf("Failed to read logs: %v\n", readErr)
-			os.Exit(1)
+	// Read existing content
+	content, _ := io.ReadAll(file)
+	fmt.Print(string(content))
+
+	fmt.Println("\nFollowing logs (Ctrl+C to exit)...")
+
+	// Tail the file
+	for {
+		line := make([]byte, 1024)
+		n, err := file.Read(line)
+		if n > 0 {
+			fmt.Print(string(line[:n]))
 		}
-		fmt.Print(string(content))
+		if err == io.EOF {
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
+		if err != nil {
+			break
+		}
 	}
 }
