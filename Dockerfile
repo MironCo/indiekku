@@ -1,7 +1,6 @@
 FROM --platform=linux/amd64 debian:13-slim
 
 RUN apt-get update && apt-get install -y \
-    libgconf-2-4 \
     libxss1 \
     libgtk-3-0 \
     libxrandr2 \
@@ -9,7 +8,7 @@ RUN apt-get update && apt-get install -y \
     libpangocairo-1.0-0 \
     libatk1.0-0 \
     libcairo-gobject2 \
-    libgdk-pixbuf2.0-0 \
+    libgdk-pixbuf-xlib-2.0-0 \
     libnss3 \
     && rm -rf /var/lib/apt/lists/*
 
