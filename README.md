@@ -3,11 +3,14 @@
 ![Tests](https://github.com/MironCo/indiekku/actions/workflows/test.yml/badge.svg)
 [![Known Vulnerabilities](https://snyk.io/test/github/mironco/indiekku/badge.svg)](https://snyk.io/test/github/mironco/indiekku)
 
-**indiekku** is a lightweight game server orchestration tool for Unity multiplayer games. It manages Docker containers running Unity dedicated servers, providing a simple CLI and REST API for server lifecycle management.
+**indiekku** is a lightweight game server orchestration tool for Unity multiplayer games. It manages Docker containers running Unity dedicated servers, providing a simple CLI, REST API, and web UI for server lifecycle management.
 
 ## Features
 
 - **Simple CLI** - Start, stop, and list game servers with intuitive commands
+- **Web UI** - Modern web interface for uploading and managing server builds
+- **API Key Authentication** - Secure API access with automatically generated keys
+- **Rolling Deployment Support** - Upload new builds without affecting running servers
 - **Docker-based** - Isolated server instances with automatic port management
 - **REST API** - Programmatic server control via HTTP endpoints
 - **Auto-discovery** - Automatically detects Unity server binaries
@@ -36,10 +39,37 @@ make build
 
 ### Basic Usage
 
+#### 1. Start the Server
+
 ```bash
 # Start the API server (runs in background)
 ./bin/indiekku serve
+```
 
+On first run, indiekku will generate an API key and display it. **Save this key** - you'll need it to authenticate.
+
+```
+======================================================================
+  NEW API KEY GENERATED
+======================================================================
+
+  Your API Key: a1b2c3d4e5f6...
+
+  This key has been saved to: .indiekku_apikey
+  Keep this key secure - you'll need it to authenticate API requests.
+======================================================================
+```
+
+#### 2. Use the Web UI
+
+1. Navigate to `http://localhost:8080` in your browser
+2. Login with your API key
+3. Upload a ZIP file containing your Unity server build
+4. New servers will use the uploaded build
+
+#### 3. CLI Commands
+
+```bash
 # Start a game server (auto-assigns port 7777, 7778, etc.)
 ./bin/indiekku start
 
@@ -149,15 +179,21 @@ Currently configured via constants:
 
 ## Roadmap
 
+- [WIP] Web dashboard 
 - [ ] Configuration file support
 - [ ] Player count tracking via heartbeat
 - [ ] Automatic server restart on crash
 - [ ] Multiple server build support
 - [ ] Metrics and monitoring
 - [ ] Persistent state (Redis/SQLite)
-- [ ] Web dashboard
 
 ## Version
+
+**v0.2.0** - Web UI and authentication
+- Added web UI for build management
+- API key authentication
+- File upload support for server builds
+- Rolling deployment capability
 
 **v0.1.0** - Initial release
 
