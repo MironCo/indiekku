@@ -77,16 +77,19 @@ func runServe() {
 	}
 
 	if isNew {
-		fmt.Printf("\n" + strings.Repeat("=", 70) + "\n")
-		fmt.Printf("  NEW API KEY GENERATED\n")
-		fmt.Printf(strings.Repeat("=", 70) + "\n\n")
+		fmt.Println()
+		fmt.Println(strings.Repeat("=", 70))
+		fmt.Println("  NEW API KEY GENERATED")
+		fmt.Println(strings.Repeat("=", 70))
+		fmt.Println()
 		fmt.Printf("  Your API Key: %s\n\n", apiKey)
 		fmt.Printf("  This key has been saved to: .indiekku_apikey\n")
 		fmt.Printf("  Keep this key secure - you'll need it to authenticate API requests.\n\n")
 		fmt.Printf("  Example usage:\n")
 		fmt.Printf("    curl -H \"Authorization: Bearer %s\" \\\n", apiKey)
 		fmt.Printf("         http://localhost:8080/api/v1/servers\n\n")
-		fmt.Printf(strings.Repeat("=", 70) + "\n\n")
+		fmt.Println(strings.Repeat("=", 70))
+		fmt.Println()
 	}
 
 	// Check if this is the forked daemon process (internal flag)

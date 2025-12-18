@@ -34,8 +34,8 @@ func AuthMiddleware(validAPIKey string) gin.HandlerFunc {
 
 		token := parts[1]
 
-		// Validate the token
-		if token != validAPIKey {
+		// Validate the token (reject empty tokens as a security measure)
+		if token == "" || validAPIKey == "" || token != validAPIKey {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error": "invalid API key",
 			})
