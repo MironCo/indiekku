@@ -69,13 +69,6 @@ func runServe() {
 		os.Exit(1)
 	}
 
-	// Check if server binary exists
-	_, err := server.FindBinary(server.DefaultServerDir)
-	if err != nil {
-		fmt.Printf("Failed to find server binary: %v\n", err)
-		os.Exit(1)
-	}
-
 	// Ensure API key exists (generate if first run)
 	apiKey, isNew, err := security.EnsureAPIKey()
 	if err != nil {
