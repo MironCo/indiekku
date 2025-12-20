@@ -89,7 +89,7 @@ func (h *ApiHandler) StartServer(c *gin.Context) {
 			})
 			return
 		}
-		containerName = docker.DefaultContainerPrefix + name
+		containerName = name
 
 		// Check if this name is already in use
 		if _, err := h.stateManager.GetServer(containerName); err != nil {

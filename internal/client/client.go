@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	"indiekku/internal/security"
 )
 
 const (
@@ -16,17 +18,30 @@ const (
 // Client handles HTTP requests to the indiekku API
 type Client struct {
 	baseURL    string
+	apiKey     string
 	httpClient *http.Client
 }
 
 // NewClient creates a new API client
-func NewClient(baseURL string) *Client {
+// It automatically loads the API key from the standard location
+func NewClient(baseURL string) (*Client, error) {
+	apiKey, err := security.LoadAPIKey()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load API key: %w (make sure 'indiekku serve' has been run)", err)
+	}
+
 	return &Client{
 		baseURL: baseURL,
+		apiKey:  apiKey,
 		httpClient: &http.Client{
 			Timeout: defaultTimeout,
 		},
-	}
+	}, nil
+}
+
+// addAuthHeader adds the Bearer token to the request
+func (c *Client) addAuthHeader(req *http.Request) {
+	req.Header.Set("Authorization", "Bearer "+c.apiKey)
 }
 
 // HealthCheck checks if the API server is running
@@ -58,17 +73,25 @@ type StartServerResponse struct {
 
 // StartServer starts a new game server
 func (c *Client) StartServer(port string) (*StartServerResponse, error) {
-	req := StartServerRequest{Port: port}
-	body, err := json.Marshal(req)
+	reqBody := StartServerRequest{Port: port}
+	body, err := json.Marshal(reqBody)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := c.httpClient.Post(
+	req, err := http.NewRequest(
+		"POST",
 		c.baseURL+"/api/v1/servers/start",
-		"application/json",
 		bytes.NewBuffer(body),
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	c.addAuthHeader(req)
+
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start server: %w", err)
 	}
@@ -97,6 +120,8 @@ func (c *Client) StopServer(containerName string) error {
 	if err != nil {
 		return err
 	}
+
+	c.addAuthHeader(req)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -129,7 +154,14 @@ type ListServersResponse struct {
 
 // ListServers lists all running game servers
 func (c *Client) ListServers() (*ListServersResponse, error) {
-	resp, err := c.httpClient.Get(c.baseURL + "/api/v1/servers")
+	req, err := http.NewRequest("GET", c.baseURL+"/api/v1/servers", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	c.addAuthHeader(req)
+
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list servers: %w", err)
 	}
