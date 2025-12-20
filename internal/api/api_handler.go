@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"indiekku/internal/docker"
+	"indiekku/internal/namegen"
 	"indiekku/internal/security"
 	"indiekku/internal/server"
 	"indiekku/internal/state"
@@ -77,7 +78,33 @@ func (h *ApiHandler) StartServer(c *gin.Context) {
 		return
 	}
 
-	containerName := docker.DefaultContainerPrefix + port
+	// Generate a unique container name with video game theme
+	var containerName string
+	maxRetries := 10
+	for i := 0; i < maxRetries; i++ {
+		name, err := namegen.Generate()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": fmt.Sprintf("Failed to generate server name: %v", err),
+			})
+			return
+		}
+		containerName = name
+
+		// Check if this name is already in use
+		if _, err := h.stateManager.GetServer(containerName); err != nil {
+			// Server not found, this name is available
+			break
+		}
+
+		// Name collision, try again
+		if i == maxRetries-1 {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Failed to generate unique server name after multiple attempts",
+			})
+			return
+		}
+	}
 
 	// Check if Docker image exists, if not build it
 	if !docker.ImageExists(h.imageName) {

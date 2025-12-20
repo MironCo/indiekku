@@ -230,7 +230,11 @@ func runStart() {
 	}
 
 	// Create API client
-	apiClient := client.NewClient(defaultAPIURL)
+	apiClient, err := client.NewClient(defaultAPIURL)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
+	}
 
 	// Check if API is running
 	if err := apiClient.HealthCheck(); err != nil {
@@ -262,7 +266,11 @@ func runStop() {
 	containerName := os.Args[2]
 
 	// Create API client
-	apiClient := client.NewClient(defaultAPIURL)
+	apiClient, err := client.NewClient(defaultAPIURL)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
+	}
 
 	// Check if API is running
 	if err := apiClient.HealthCheck(); err != nil {
@@ -284,7 +292,11 @@ func runStop() {
 
 func runPs() {
 	// Create API client
-	apiClient := client.NewClient(defaultAPIURL)
+	apiClient, err := client.NewClient(defaultAPIURL)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
+	}
 
 	// Check if API is running
 	if err := apiClient.HealthCheck(); err != nil {
