@@ -198,8 +198,27 @@ func runShutdown() {
 		os.Exit(1)
 	}
 
+	// First, try to stop all running game servers via the API
+	apiClient, err := client.NewClient(defaultAPIURL)
+	if err == nil {
+		fmt.Println("Stopping all running game servers...")
+		resp, err := apiClient.ListServers()
+		if err == nil && resp.Count > 0 {
+			for _, server := range resp.Servers {
+				fmt.Printf("  Stopping %s...\n", server.ContainerName)
+				if err := apiClient.StopServer(server.ContainerName); err != nil {
+					fmt.Printf("    Warning: Failed to stop %s: %v\n", server.ContainerName, err)
+				} else {
+					fmt.Printf("    ✓ Stopped %s\n", server.ContainerName)
+				}
+			}
+		} else if resp.Count == 0 {
+			fmt.Println("  No running servers to stop")
+		}
+	}
+
 	pid := string(pidBytes)
-	fmt.Printf("Shutting down indiekku API server (PID: %s)...\n", pid)
+	fmt.Printf("\nShutting down indiekku API server (PID: %s)...\n", pid)
 
 	// Kill the process
 	// Use syscall.Kill on Unix, or just use os.FindProcess
