@@ -18,6 +18,8 @@ LDFLAGS := -X main.version=$(VERSION)
 all: build
 
 build:
+	@echo "Updating embedded web UI..."
+	@cp web/index.html internal/api/webui_index.html
 	mkdir -p $(BIN_DIR)
 	$(GOBUILD) -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/$(BINARY_NAME) $(BINARY_PATH)
 

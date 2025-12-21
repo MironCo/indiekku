@@ -1,132 +1,144 @@
 #!/bin/bash
+
 set -e
 
-# indiekku installer script
-# Usage: curl -sSL https://raw.githubusercontent.com/MironCo/indiekku/main/install.sh | sudo bash
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+BOLD='\033[1m'
+NC='\033[0m' # No Color
 
-echo "========================================"
-echo "  indiekku installer"
-echo "========================================"
+# GitHub repository
+REPO="MironCo/indiekku"
+BINARY_NAME="indiekku"
+INSTALL_DIR="/usr/local/bin"
+
+# Print fancy header
+clear
+echo -e "${BLUE}${BOLD}"
+echo "╔═══════════════════════════════════════════════════════════╗"
+echo "║                                                           ║"
+echo "║                    🎮  INDIEKKU  🎮                       ║"
+echo "║                                                           ║"
+echo "║            Unity Server Orchestration Tool                ║"
+echo "║                                                           ║"
+echo "╚═══════════════════════════════════════════════════════════╝"
+echo -e "${NC}"
 echo ""
 
-# Check if running as root
-if [ "$EUID" -ne 0 ]; then
-    echo "Error: This script must be run as root (use sudo)"
-    exit 1
+# Check if Docker is installed
+echo -e "${BOLD}[1/4] Checking dependencies...${NC}"
+if ! command -v docker &> /dev/null; then
+    echo -e "${YELLOW}Docker not found. Installing Docker...${NC}"
+    curl -fsSL https://get.docker.com -o get-docker.sh
+    sh get-docker.sh
+    rm get-docker.sh
+    systemctl start docker
+    systemctl enable docker
+    echo -e "${GREEN}✓ Docker installed${NC}"
+else
+    echo -e "${GREEN}✓ Docker found${NC}"
 fi
 
+# Check if Docker is running
+if ! docker info &> /dev/null 2>&1; then
+    echo -e "${YELLOW}Starting Docker...${NC}"
+    systemctl start docker 2>/dev/null || true
+    sleep 2
+    if ! docker info &> /dev/null 2>&1; then
+        echo -e "${RED}✗ Docker is not running. Please start Docker and try again.${NC}"
+        exit 1
+    fi
+fi
+echo -e "${GREEN}✓ Docker is running${NC}"
+echo ""
+
 # Detect OS and architecture
+echo -e "${BOLD}[2/4] Detecting platform...${NC}"
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
 ARCH=$(uname -m)
 
-# Convert architecture names
 case $ARCH in
-    x86_64)
-        ARCH="amd64"
-        ;;
-    aarch64|arm64)
-        ARCH="arm64"
-        ;;
+    x86_64) ARCH="amd64" ;;
+    aarch64|arm64) ARCH="arm64" ;;
     *)
-        echo "Error: Unsupported architecture: $ARCH"
+        echo -e "${RED}✗ Unsupported architecture: $ARCH${NC}"
         exit 1
         ;;
 esac
 
-# Check if OS is supported
-if [ "$OS" != "linux" ] && [ "$OS" != "darwin" ]; then
-    echo "Error: Unsupported OS: $OS"
-    echo "indiekku supports Linux and macOS only."
-    exit 1
-fi
-
-echo "Detected platform: $OS-$ARCH"
-echo ""
-
-# Check for Docker
-echo "Checking dependencies..."
-if ! command -v docker &> /dev/null; then
-    echo "Error: Docker is not installed."
-    echo ""
-    echo "Please install Docker first:"
-    echo "  macOS: https://docs.docker.com/desktop/install/mac-install/"
-    echo "  Linux: https://docs.docker.com/engine/install/"
-    exit 1
-fi
-
-if ! docker ps &> /dev/null; then
-    echo "Error: Docker is installed but not running."
-    echo "Please start Docker and try again."
-    exit 1
-fi
-
-echo "✓ Docker is installed and running"
+echo -e "${GREEN}✓ Platform: $OS-$ARCH${NC}"
 echo ""
 
 # Download latest release
-REPO="MironCo/indiekku"
-RELEASE_URL="https://github.com/$REPO/releases/latest/download"
-FILENAME="indiekku-$OS-$ARCH.tar.gz"
-DOWNLOAD_URL="$RELEASE_URL/$FILENAME"
+echo -e "${BOLD}[3/4] Downloading indiekku...${NC}"
+LATEST_VERSION=$(curl -s "https://api.github.com/repos/$REPO/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
 
-echo "Downloading indiekku from $DOWNLOAD_URL..."
-TEMP_DIR=$(mktemp -d)
-cd "$TEMP_DIR"
-
-if ! curl -sSL -o "$FILENAME" "$DOWNLOAD_URL"; then
-    echo "Error: Failed to download indiekku"
-    rm -rf "$TEMP_DIR"
+if [ -z "$LATEST_VERSION" ]; then
+    echo -e "${RED}✗ Could not fetch latest version${NC}"
     exit 1
 fi
 
-echo "✓ Downloaded successfully"
-echo ""
+echo -e "Latest version: ${BLUE}$LATEST_VERSION${NC}"
 
-# Extract archive
-echo "Installing indiekku..."
-tar -xzf "$FILENAME"
+DOWNLOAD_URL="https://github.com/$REPO/releases/download/$LATEST_VERSION/${BINARY_NAME}-${OS}-${ARCH}.tar.gz"
+TMP_DIR=$(mktemp -d)
 
-# Install binary
-INSTALL_DIR="/usr/local/bin"
-mkdir -p "$INSTALL_DIR"
-mv indiekku "$INSTALL_DIR/indiekku"
-chmod +x "$INSTALL_DIR/indiekku"
+curl -L -o "$TMP_DIR/${BINARY_NAME}.tar.gz" "$DOWNLOAD_URL" 2>&1 | grep -v "%" || true
 
-# Install web directory
-WEB_DIR="/usr/local/share/indiekku"
-mkdir -p "$WEB_DIR"
-mv web "$WEB_DIR/"
-
-echo "✓ Installed to $INSTALL_DIR/indiekku"
-echo "✓ Web files installed to $WEB_DIR/web"
-echo ""
-
-# Cleanup
-cd - > /dev/null
-rm -rf "$TEMP_DIR"
-
-# Verify installation
-if ! command -v indiekku &> /dev/null; then
-    echo "Warning: indiekku was installed but is not in PATH"
-    echo "You may need to add $INSTALL_DIR to your PATH"
+if [ $? -ne 0 ]; then
+    echo -e "${RED}✗ Failed to download${NC}"
+    rm -rf "$TMP_DIR"
     exit 1
 fi
 
-VERSION=$(indiekku version 2>/dev/null || echo "unknown")
+echo -e "${GREEN}✓ Downloaded${NC}"
+echo ""
 
-echo "========================================"
-echo "  indiekku installed successfully!"
-echo "========================================"
+# Install
+echo -e "${BOLD}[4/4] Installing...${NC}"
+tar -xzf "$TMP_DIR/${BINARY_NAME}.tar.gz" -C "$TMP_DIR"
+TMP_FILE="$TMP_DIR/$BINARY_NAME"
+
+if [ ! -f "$TMP_FILE" ]; then
+    echo -e "${RED}✗ Binary not found in archive${NC}"
+    rm -rf "$TMP_DIR"
+    exit 1
+fi
+
+chmod +x "$TMP_FILE"
+
+if [ -w "$INSTALL_DIR" ]; then
+    mv "$TMP_FILE" "$INSTALL_DIR/$BINARY_NAME"
+else
+    sudo mv "$TMP_FILE" "$INSTALL_DIR/$BINARY_NAME"
+fi
+
+rm -rf "$TMP_DIR"
+
+if ! command -v $BINARY_NAME &> /dev/null; then
+    echo -e "${RED}✗ Installation failed${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}✓ Installed to $INSTALL_DIR/$BINARY_NAME${NC}"
 echo ""
-echo "Version: $VERSION"
+
+# Success message
+echo -e "${GREEN}${BOLD}"
+echo "╔═══════════════════════════════════════════════════════════╗"
+echo "║                                                           ║"
+echo "║              ✨ Installation Complete! ✨                 ║"
+echo "║                                                           ║"
+echo "╚═══════════════════════════════════════════════════════════╝"
+echo -e "${NC}"
 echo ""
-echo "Next steps:"
-echo "  1. Start the indiekku server:"
-echo "     indiekku serve"
+echo -e "${BOLD}Quick Start:${NC}"
+echo -e "  ${BLUE}1.${NC} indiekku serve              ${GREEN}# Start the server${NC}"
+echo -e "  ${BLUE}2.${NC} open http://localhost:8080  ${GREEN}# Open web UI${NC}"
+echo -e "  ${BLUE}3.${NC} Upload your Unity build     ${GREEN}# Deploy!${NC}"
 echo ""
-echo "  2. Open the web UI at http://localhost:8080"
-echo ""
-echo "  3. Upload your Unity server build"
-echo ""
-echo "Documentation: https://github.com/$REPO"
+echo -e "Documentation: ${BLUE}https://github.com/$REPO${NC}"
 echo ""
