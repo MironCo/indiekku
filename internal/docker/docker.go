@@ -51,7 +51,7 @@ func BuildImage(imageName string) error {
 
 // RunContainer starts a Docker container with the specified configuration
 func RunContainer(containerName, imageName, port, serverBinary string) error {
-	cmd := exec.Command("docker", "run", "--rm", "-d",
+	cmd := exec.Command("docker", "run", "-d",
 		"--network", "host", // This will make Unity bind to both IPv4 and IPv6
 		"--name", containerName,
 		imageName,
