@@ -16,6 +16,10 @@ import (
 	"indiekku/internal/state"
 )
 
+var (
+	version = "dev" // Set by ldflags during build
+)
+
 const (
 	defaultPort    = "7777"
 	defaultAPIPort = "8080"
@@ -44,6 +48,8 @@ func main() {
 		runStop()
 	case "ps":
 		runPs()
+	case "version":
+		runVersion()
 	default:
 		fmt.Printf("Unknown command: %s\n", command)
 		printUsage()
@@ -60,6 +66,11 @@ func printUsage() {
 	fmt.Println("  indiekku start [port] Start a game server container")
 	fmt.Println("  indiekku stop <name>  Stop a game server container")
 	fmt.Println("  indiekku ps           List running game server containers")
+	fmt.Println("  indiekku version      Show version information")
+}
+
+func runVersion() {
+	fmt.Printf("indiekku %s\n", version)
 }
 
 func runServe() {

@@ -21,25 +21,25 @@ jobs:
 
       - name: Build for Linux amd64
         run: |
-          GOOS=linux GOARCH=amd64 go build -o indiekku ./cmd/indiekku
+          GOOS=linux GOARCH=amd64 go build -ldflags "-X main.version=${GITHUB_REF_NAME}" -o indiekku ./cmd/indiekku
           tar -czf indiekku-linux-amd64.tar.gz indiekku web/
           rm indiekku
 
       - name: Build for Linux arm64
         run: |
-          GOOS=linux GOARCH=arm64 go build -o indiekku ./cmd/indiekku
+          GOOS=linux GOARCH=arm64 go build -ldflags "-X main.version=${GITHUB_REF_NAME}" -o indiekku ./cmd/indiekku
           tar -czf indiekku-linux-arm64.tar.gz indiekku web/
           rm indiekku
 
       - name: Build for macOS amd64
         run: |
-          GOOS=darwin GOARCH=amd64 go build -o indiekku ./cmd/indiekku
+          GOOS=darwin GOARCH=amd64 go build -ldflags "-X main.version=${GITHUB_REF_NAME}" -o indiekku ./cmd/indiekku
           tar -czf indiekku-darwin-amd64.tar.gz indiekku web/
           rm indiekku
 
       - name: Build for macOS arm64 (Apple Silicon)
         run: |
-          GOOS=darwin GOARCH=arm64 go build -o indiekku ./cmd/indiekku
+          GOOS=darwin GOARCH=arm64 go build -ldflags "-X main.version=${GITHUB_REF_NAME}" -o indiekku ./cmd/indiekku
           tar -czf indiekku-darwin-arm64.tar.gz indiekku web/
           rm indiekku
 
