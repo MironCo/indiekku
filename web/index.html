@@ -466,7 +466,10 @@
             <div class="dashboard-grid">
                 <!-- Running Servers Section -->
                 <div class="servers-section">
-                    <h2>Running Servers</h2>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h2 style="margin-bottom: 0;">Running Servers</h2>
+                        <button class="stop-button" onclick="spawnServer()" style="width: auto;">Start Server</button>
+                    </div>
                     <div id="serversTable"></div>
                 </div>
 
@@ -864,6 +867,43 @@
             setTimeout(() => {
                 messageEl.classList.remove('show');
             }, 5000);
+        }
+
+        // Spawn a new server
+        async function spawnServer() {
+            if (!isAuthenticated) {
+                alert('Please authenticate first');
+                return;
+            }
+
+            const port = prompt('Enter port number (leave empty for auto-assign):');
+            if (port === null) {
+                return; // User cancelled
+            }
+
+            try {
+                const response = await fetch('/api/v1/servers/start', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + apiKey,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        port: port || undefined
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    alert(`Server started successfully!\nContainer: ${data.container_name}\nPort: ${data.port}`);
+                    loadServers(); // Refresh the server list
+                } else {
+                    const data = await response.json();
+                    alert('Failed to start server: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('Error starting server: ' + error.message);
+            }
         }
     </script>
 </body>

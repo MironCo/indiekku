@@ -19,6 +19,11 @@ jobs:
         with:
           go-version: '1.23'
 
+      - name: Prepare embedded files
+        run: |
+          cp web/index.html internal/api/webui_index.html
+          cp Dockerfile internal/docker/dockerfile_embed
+
       - name: Build for Linux amd64
         run: |
           GOOS=linux GOARCH=amd64 go build -ldflags "-X main.version=${GITHUB_REF_NAME}" -o indiekku ./cmd/indiekku
