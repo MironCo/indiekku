@@ -1,15 +1,20 @@
 package docker
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 )
 
 const (
 	DefaultImageName       = "unity-server"
 	DefaultContainerPrefix = "unity-server-"
 )
+
+//go:embed dockerfile_embed
+var dockerfileContent string
 
 // CheckDockerInstalled checks if Docker is installed and running
 func CheckDockerInstalled() error {
@@ -29,7 +34,16 @@ func ImageExists(imageName string) bool {
 
 // BuildImage builds a Docker image from the Dockerfile
 func BuildImage(imageName string) error {
-	cmd := exec.Command("docker", "build", "-t", imageName, "-f", "Dockerfile", ".")
+	// Write embedded Dockerfile to temp file
+	tempDir := os.TempDir()
+	dockerfilePath := filepath.Join(tempDir, "Dockerfile.indiekku")
+
+	if err := os.WriteFile(dockerfilePath, []byte(dockerfileContent), 0644); err != nil {
+		return fmt.Errorf("failed to write Dockerfile: %w", err)
+	}
+	defer os.Remove(dockerfilePath)
+
+	cmd := exec.Command("docker", "build", "-t", imageName, "-f", dockerfilePath, ".")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()

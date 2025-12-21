@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"indiekku/internal/docker"
 	"indiekku/internal/server"
 
 	"github.com/gin-gonic/gin"
@@ -86,6 +87,18 @@ func (h *ApiHandler) UploadRelease(c *gin.Context) {
 	}
 
 	fmt.Printf("Upload successful: %s\n", file.Filename)
+	fmt.Printf("Rebuilding Docker image...\n")
+
+	// Rebuild Docker image with new server files
+	if err := docker.BuildImage(docker.DefaultImageName); err != nil {
+		fmt.Printf("Error rebuilding Docker image: %v\n", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": fmt.Sprintf("Failed to rebuild Docker image: %v", err),
+		})
+		return
+	}
+
+	fmt.Printf("Docker image rebuilt successfully\n")
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Release uploaded successfully",

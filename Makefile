@@ -20,6 +20,8 @@ all: build
 build:
 	@echo "Updating embedded web UI..."
 	@cp web/index.html internal/api/webui_index.html
+	@echo "Updating embedded Dockerfile..."
+	@cp Dockerfile internal/docker/dockerfile_embed
 	mkdir -p $(BIN_DIR)
 	$(GOBUILD) -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/$(BINARY_NAME) $(BINARY_PATH)
 

@@ -43,8 +43,8 @@ ehthumbs.db
 Thumbs.db
 
 # Keep the folder but ignore contents
-sdd-server-build/*
-!sdd-server-build/.gitkeep
+game_server/*
+!game_server/.gitkeep
 
 # Logs
 *.log
@@ -68,3 +68,9 @@ temp/
 
 # API key
 .indiekku_apikey
+
+# Archive files
+*.zip
+*.tar.gz
+*.tgz
+*.tar
