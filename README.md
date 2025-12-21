@@ -64,8 +64,16 @@ On first run, indiekku will generate an API key and display it. **Save this key*
 
 1. Navigate to `http://localhost:8080` in your browser
 2. Login with your API key
-3. Upload a ZIP file containing your Unity server build
-4. New servers will use the uploaded build
+3. Upload a ZIP file containing your Unity server build:
+   - Drag and drop a ZIP file onto the upload zone, or
+   - Click "Browse Files" to select a file
+4. The web UI shows all running servers with:
+   - Server names (e.g., "legendary-sword", "crimson-dragon")
+   - Port numbers
+   - Player counts
+   - Uptime
+   - Stop buttons for each server
+5. The server list auto-refreshes every 5 seconds
 
 #### 3. CLI Commands
 
@@ -79,8 +87,8 @@ On first run, indiekku will generate an API key and display it. **Save this key*
 # List running servers
 ./bin/indiekku ps
 
-# Stop a server
-./bin/indiekku stop unity-server-7777
+# Stop a server (use server name from 'ps' output)
+./bin/indiekku stop legendary-sword
 
 # View logs
 ./bin/indiekku logs
@@ -173,7 +181,7 @@ This design allows the API to run continuously while CLI commands execute and ex
 Currently configured via constants:
 - **API Port**: `8080`
 - **Base game port**: `7777`
-- **Container prefix**: `unity-server-`
+- **Container naming**: Random video game themed names (e.g., "legendary-sword", "crimson-dragon")
 - **Docker image**: `unity-server`
 - **Server directory**: `game_server/`
 
@@ -188,6 +196,16 @@ Currently configured via constants:
 - [ ] Persistent state (Redis/SQLite)
 
 ## Version
+
+**v0.3.0** - Critical fixes and improvements
+- Fixed critical file upload permission errors
+- Enhanced web UI with drag-and-drop file upload
+- Added video game themed random server name generation (e.g., "legendary-sword", "crimson-dragon")
+- Improved server list table with auto-refresh and overflow handling
+- Full-width responsive UI layout
+- Fixed recursive binary detection for subdirectories in ZIP uploads
+- Fixed Docker container execute permissions for server binaries
+- Shutdown command now stops all running containers before API shutdown
 
 **v0.2.0** - Web UI and authentication
 - Added web UI for build management
