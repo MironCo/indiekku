@@ -236,6 +236,70 @@
             color: rgba(0, 0, 0, 0.6);
             margin-top: 0.5rem;
         }
+
+        .drop-zone {
+            border: 2px dashed rgba(0, 0, 0, 0.3);
+            border-radius: 0;
+            padding: 3rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: rgba(0, 0, 0, 0.02);
+            margin-bottom: 1rem;
+        }
+
+        .drop-zone:hover {
+            border-color: #000000;
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .drop-zone.dragover {
+            border-color: #000000;
+            background: rgba(0, 0, 0, 0.1);
+            border-style: solid;
+        }
+
+        .drop-zone-content {
+            pointer-events: none;
+        }
+
+        .drop-zone svg {
+            margin-bottom: 1rem;
+            opacity: 0.6;
+        }
+
+        .drop-zone-text {
+            font-size: 1.1rem;
+            color: #000000;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .drop-zone-or {
+            font-size: 0.9rem;
+            color: rgba(0, 0, 0, 0.5);
+            margin: 1rem 0;
+        }
+
+        .drop-zone-button {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background: #ffffff;
+            border: 2px solid #000000;
+            color: #000000;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 600;
+            text-transform: none;
+            font-size: 1rem;
+            letter-spacing: normal;
+            pointer-events: auto;
+        }
+
+        .drop-zone-button:hover {
+            background: #000000;
+            color: #ffffff;
+        }
     </style>
 </head>
 <body>
@@ -281,14 +345,27 @@
                 <div id="uploadMessage" class="message"></div>
 
                 <form id="uploadForm">
-                    <label for="serverZip">Server Build (ZIP)</label>
-                    <input
-                        type="file"
-                        id="serverZip"
-                        name="server_build"
-                        accept=".zip"
-                        required
-                    >
+                    <div id="dropZone" class="drop-zone">
+                        <div class="drop-zone-content">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            <p class="drop-zone-text">Drag and drop your ZIP file here</p>
+                            <p class="drop-zone-or">or</p>
+                            <label for="serverZip" class="drop-zone-button">Browse Files</label>
+                        </div>
+                        <input
+                            type="file"
+                            id="serverZip"
+                            name="server_build"
+                            accept=".zip"
+                            required
+                            style="display: none;"
+                        >
+                    </div>
+
                     <div class="file-info" id="fileInfo"></div>
 
                     <div class="progress" id="uploadProgress">
@@ -369,15 +446,69 @@
             setAuthenticated(false);
         });
 
-        // File input change handler
-        document.getElementById('serverZip').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const sizeMB = (file.size / 1024 / 1024).toFixed(2);
-                document.getElementById('fileInfo').textContent =
-                    'Selected: ' + file.name + ' (' + sizeMB + ' MB)';
+        // Drag and drop handlers
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('serverZip');
+
+        // Prevent default drag behaviors
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        // Highlight drop zone when dragging over it
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => {
+                dropZone.classList.add('dragover');
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => {
+                dropZone.classList.remove('dragover');
+            }, false);
+        });
+
+        // Handle dropped files
+        dropZone.addEventListener('drop', (e) => {
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                handleFileSelect(files[0]);
+            }
+        }, false);
+
+        // Handle click on drop zone to trigger file input
+        dropZone.addEventListener('click', (e) => {
+            if (e.target.tagName !== 'LABEL') {
+                fileInput.click();
             }
         });
+
+        // File input change handler
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                handleFileSelect(file);
+            }
+        });
+
+        // Handle file selection
+        function handleFileSelect(file) {
+            if (!file.name.endsWith('.zip')) {
+                showMessage('uploadMessage', 'Please select a ZIP file', 'error');
+                fileInput.value = '';
+                return;
+            }
+            const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+            document.getElementById('fileInfo').textContent =
+                'Selected: ' + file.name + ' (' + sizeMB + ' MB)';
+        }
 
         // Upload form handler
         document.getElementById('uploadForm').addEventListener('submit', async (e) => {
@@ -388,7 +519,6 @@
                 return;
             }
 
-            const fileInput = document.getElementById('serverZip');
             const file = fileInput.files[0];
 
             if (!file) {
