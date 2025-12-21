@@ -21,21 +21,16 @@
 
 ### Prerequisites
 
-- Go 1.23.2 or later
 - Docker installed and running
 
 ### Installation
 
 ```bash
-# Clone the repository
-git clone https://github.com/MironCo/indiekku
-cd indiekku
-
-# Build the binary
-make build
-
-# The binary will be in bin/indiekku
+# Install indiekku
+curl -fsSL https://indiekku.mironsulicz.dev/install.sh | bash
 ```
+
+Or download the latest release manually from the [releases page](https://github.com/MironCo/indiekku/releases).
 
 ### Basic Usage
 
@@ -43,7 +38,7 @@ make build
 
 ```bash
 # Start the API server (runs in background)
-./bin/indiekku serve
+indiekku serve
 ```
 
 On first run, indiekku will generate an API key and display it. **Save this key** - you'll need it to authenticate.
@@ -60,41 +55,44 @@ On first run, indiekku will generate an API key and display it. **Save this key*
 ======================================================================
 ```
 
-#### 2. Use the Web UI
+#### 2. Access the Web UI
 
-1. Navigate to `http://localhost:8080` in your browser
-2. Login with your API key
-3. Upload a ZIP file containing your Unity server build:
-   - Drag and drop a ZIP file onto the upload zone, or
-   - Click "Browse Files" to select a file
-4. The web UI shows all running servers with:
-   - Server names (e.g., "legendary-sword", "crimson-dragon")
-   - Port numbers
-   - Player counts
-   - Uptime
-   - Stop buttons for each server
-5. The server list auto-refreshes every 5 seconds
+Navigate to `http://localhost:8080` and login with your API key.
+
+**Upload a Server Build:**
+- Drag and drop a ZIP file containing your Unity server build, or
+- Click "Browse Files" to select a file
+- The build will be automatically extracted and the Docker image rebuilt
+
+**Start Servers:**
+- Click "Start Server" to launch a new game server instance
+- Optionally specify a port, or leave empty for auto-assignment
+
+**Manage Servers:**
+- View all running servers with names (e.g., "legendary-sword"), ports, player counts, and uptime
+- Stop servers with one click
+- Server list auto-refreshes every 5 seconds
 
 #### 3. CLI Commands
 
 ```bash
 # Start a game server (auto-assigns port 7777, 7778, etc.)
-./bin/indiekku start
+indiekku start
 
 # Start on a specific port
-./bin/indiekku start --port 7779
+indiekku start --port 7779
 
 # List running servers
-./bin/indiekku ps
+indiekku ps
 
 # Stop a server (use server name from 'ps' output)
-./bin/indiekku stop legendary-sword
+indiekku stop legendary-sword
 
 # View logs
-./bin/indiekku logs
+indiekku logs
 
 # Shutdown the API server
-./bin/indiekku shutdown
+indiekku shutdown
 ```
 
 ## Project Structure
@@ -196,6 +194,14 @@ Currently configured via constants:
 - [ ] Persistent state (Redis/SQLite)
 
 ## Version
+
+**v0.4.0** - Single binary distribution and improved workflow
+- **Embedded Dockerfile** - Dockerfile is now embedded in the binary for true single-binary distribution
+- **Automatic Docker image rebuild** - Uploading a new server build now automatically rebuilds the Docker image
+- **Start Server button in Web UI** - Launch new game server instances directly from the web interface
+- Updated install script for streamlined deployment
+- Archive files (.zip, .tar.gz) now ignored in git
+- Improved .gitignore for cleaner repository
 
 **v0.3.0** - Critical fixes and improvements
 - Fixed critical file upload permission errors
