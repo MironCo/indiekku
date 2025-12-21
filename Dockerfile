@@ -17,7 +17,8 @@ RUN useradd -m -u 10001 unity
 
 # Copy files and fix ownership
 COPY game_server/ /app/
-RUN chown -R unity:unity /app
+RUN chown -R unity:unity /app && \
+    find /app -type f \( -name "*.x86_64" -o -name "*.exe" \) -exec chmod +x {} \;
 
 WORKDIR /app
 USER unity

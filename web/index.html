@@ -22,9 +22,15 @@
         }
 
         .container {
-            max-width: 800px;
+            max-width: 100%;
             margin: 0 auto;
             padding: 2rem;
+        }
+
+        @media (min-width: 1400px) {
+            .container {
+                padding: 2rem 4rem;
+            }
         }
 
         header {
@@ -236,6 +242,192 @@
             color: rgba(0, 0, 0, 0.6);
             margin-top: 0.5rem;
         }
+
+        .drop-zone {
+            border: 2px dashed rgba(0, 0, 0, 0.3);
+            border-radius: 0;
+            padding: 3rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: rgba(0, 0, 0, 0.02);
+            margin-bottom: 1rem;
+        }
+
+        .drop-zone:hover {
+            border-color: #000000;
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .drop-zone.dragover {
+            border-color: #000000;
+            background: rgba(0, 0, 0, 0.1);
+            border-style: solid;
+        }
+
+        .drop-zone-content {
+            pointer-events: none;
+        }
+
+        .drop-zone svg {
+            margin-bottom: 1rem;
+            opacity: 0.6;
+        }
+
+        .drop-zone-text {
+            font-size: 1.1rem;
+            color: #000000;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .drop-zone-or {
+            font-size: 0.9rem;
+            color: rgba(0, 0, 0, 0.5);
+            margin: 1rem 0;
+        }
+
+        .drop-zone-button {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background: #ffffff;
+            border: 2px solid #000000;
+            color: #000000;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 600;
+            text-transform: none;
+            font-size: 1rem;
+            letter-spacing: normal;
+            pointer-events: auto;
+        }
+
+        .drop-zone-button:hover {
+            background: #000000;
+            color: #ffffff;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 1024px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .servers-section {
+            background: transparent;
+            padding: 2rem;
+            border-radius: 0;
+            border: 2px solid #000000;
+            display: flex;
+            flex-direction: column;
+            max-height: 600px;
+        }
+
+        .servers-section h2 {
+            flex-shrink: 0;
+        }
+
+        #serversTable {
+            overflow-y: auto;
+            flex: 1;
+            min-height: 0;
+        }
+
+        #serversTable::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #serversTable::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        #serversTable::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 0;
+        }
+
+        #serversTable::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        .servers-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .servers-table th,
+        .servers-table td {
+            padding: 0.875rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .servers-table th {
+            background: rgba(0, 0, 0, 0.05);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+            color: rgba(0, 0, 0, 0.6);
+        }
+
+        .servers-table tbody tr:hover {
+            background: rgba(0, 0, 0, 0.02);
+        }
+
+        .server-name {
+            font-weight: 600;
+            color: #000000;
+        }
+
+        .server-port {
+            font-family: monospace;
+            color: rgba(0, 0, 0, 0.7);
+        }
+
+        .server-players {
+            color: rgba(0, 0, 0, 0.7);
+        }
+
+        .server-uptime {
+            color: rgba(0, 0, 0, 0.5);
+            font-size: 0.9rem;
+        }
+
+        .stop-button {
+            padding: 0.5rem 1rem;
+            background: #ffffff;
+            border: 2px solid #000000;
+            color: #000000;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .stop-button:hover {
+            background: #000000;
+            color: #ffffff;
+        }
+
+        .stop-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .no-servers {
+            text-align: center;
+            padding: 2rem;
+            color: rgba(0, 0, 0, 0.5);
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -271,8 +463,14 @@
 
         <!-- Dashboard -->
         <div class="dashboard" id="dashboard">
+            <div class="dashboard-grid">
+                <!-- Running Servers Section -->
+                <div class="servers-section">
+                    <h2>Running Servers</h2>
+                    <div id="serversTable"></div>
+                </div>
 
-            <div class="upload-section">
+                <div class="upload-section">
                 <h2>Upload New Release</h2>
                 <p style="color: rgba(0, 0, 0, 0.6); margin-bottom: 1.5rem;">
                     Upload a ZIP file containing your Unity server build
@@ -281,14 +479,27 @@
                 <div id="uploadMessage" class="message"></div>
 
                 <form id="uploadForm">
-                    <label for="serverZip">Server Build (ZIP)</label>
-                    <input
-                        type="file"
-                        id="serverZip"
-                        name="server_build"
-                        accept=".zip"
-                        required
-                    >
+                    <div id="dropZone" class="drop-zone">
+                        <div class="drop-zone-content">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            <p class="drop-zone-text">Drag and drop your ZIP file here</p>
+                            <p class="drop-zone-or">or</p>
+                            <label for="serverZip" class="drop-zone-button">Browse Files</label>
+                        </div>
+                        <input
+                            type="file"
+                            id="serverZip"
+                            name="server_build"
+                            accept=".zip"
+                            required
+                            style="display: none;"
+                        >
+                    </div>
+
                     <div class="file-info" id="fileInfo"></div>
 
                     <div class="progress" id="uploadProgress">
@@ -297,6 +508,7 @@
 
                     <button type="submit" id="uploadButton">Upload Release</button>
                 </form>
+            </div>
             </div>
         </div>
     </div>
@@ -355,11 +567,140 @@
                 loginPage.classList.add('hidden');
                 dashboard.classList.add('visible');
                 logoutBtn.style.display = 'block';
+                loadServers(); // Load servers when authenticated
+                startServerPolling(); // Start polling for server updates
             } else {
                 loginPage.classList.remove('hidden');
                 dashboard.classList.remove('visible');
                 logoutBtn.style.display = 'none';
+                stopServerPolling(); // Stop polling when logged out
             }
+        }
+
+        let pollingInterval = null;
+
+        // Start polling for server updates
+        function startServerPolling() {
+            loadServers(); // Load immediately
+            pollingInterval = setInterval(loadServers, 5000); // Poll every 5 seconds
+        }
+
+        // Stop polling
+        function stopServerPolling() {
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+            }
+        }
+
+        // Load and display servers
+        async function loadServers() {
+            if (!isAuthenticated) return;
+
+            try {
+                const response = await fetch('/api/v1/servers', {
+                    headers: {
+                        'Authorization': 'Bearer ' + apiKey
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    displayServers(data.servers || []);
+                } else {
+                    console.error('Failed to load servers');
+                }
+            } catch (error) {
+                console.error('Error loading servers:', error);
+            }
+        }
+
+        // Display servers in table
+        function displayServers(servers) {
+            const container = document.getElementById('serversTable');
+
+            if (!servers || servers.length === 0) {
+                container.innerHTML = '<div class="no-servers">No servers running</div>';
+                return;
+            }
+
+            const tableHTML = `
+                <table class="servers-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Port</th>
+                            <th>Players</th>
+                            <th>Uptime</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${servers.map(server => `
+                            <tr>
+                                <td class="server-name">${escapeHtml(server.container_name)}</td>
+                                <td class="server-port">${escapeHtml(server.port)}</td>
+                                <td class="server-players">${server.player_count || 0}</td>
+                                <td class="server-uptime">${formatUptime(server.started_at)}</td>
+                                <td>
+                                    <button class="stop-button" onclick="stopServer('${escapeHtml(server.container_name)}')">Stop</button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+
+            container.innerHTML = tableHTML;
+        }
+
+        // Stop a server
+        async function stopServer(containerName) {
+            if (!confirm(`Stop server "${containerName}"?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/v1/servers/${containerName}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': 'Bearer ' + apiKey
+                    }
+                });
+
+                if (response.ok) {
+                    loadServers(); // Refresh the list
+                } else {
+                    const data = await response.json();
+                    alert('Failed to stop server: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('Error stopping server: ' + error.message);
+            }
+        }
+
+        // Format uptime
+        function formatUptime(startedAt) {
+            const start = new Date(startedAt);
+            const now = new Date();
+            const diff = now - start;
+
+            const seconds = Math.floor(diff / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+
+            if (days > 0) return `${days}d ${hours % 24}h`;
+            if (hours > 0) return `${hours}h ${minutes % 60}m`;
+            if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
+            return `${seconds}s`;
+        }
+
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         // Logout handler
@@ -369,15 +710,69 @@
             setAuthenticated(false);
         });
 
-        // File input change handler
-        document.getElementById('serverZip').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const sizeMB = (file.size / 1024 / 1024).toFixed(2);
-                document.getElementById('fileInfo').textContent =
-                    'Selected: ' + file.name + ' (' + sizeMB + ' MB)';
+        // Drag and drop handlers
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('serverZip');
+
+        // Prevent default drag behaviors
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        // Highlight drop zone when dragging over it
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => {
+                dropZone.classList.add('dragover');
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => {
+                dropZone.classList.remove('dragover');
+            }, false);
+        });
+
+        // Handle dropped files
+        dropZone.addEventListener('drop', (e) => {
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                handleFileSelect(files[0]);
+            }
+        }, false);
+
+        // Handle click on drop zone to trigger file input
+        dropZone.addEventListener('click', (e) => {
+            if (e.target.tagName !== 'LABEL') {
+                fileInput.click();
             }
         });
+
+        // File input change handler
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                handleFileSelect(file);
+            }
+        });
+
+        // Handle file selection
+        function handleFileSelect(file) {
+            if (!file.name.endsWith('.zip')) {
+                showMessage('uploadMessage', 'Please select a ZIP file', 'error');
+                fileInput.value = '';
+                return;
+            }
+            const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+            document.getElementById('fileInfo').textContent =
+                'Selected: ' + file.name + ' (' + sizeMB + ' MB)';
+        }
 
         // Upload form handler
         document.getElementById('uploadForm').addEventListener('submit', async (e) => {
@@ -388,7 +783,6 @@
                 return;
             }
 
-            const fileInput = document.getElementById('serverZip');
             const file = fileInput.files[0];
 
             if (!file) {

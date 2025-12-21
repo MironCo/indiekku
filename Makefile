@@ -9,7 +9,7 @@ BINARY_NAME=indiekku
 BINARY_PATH=./cmd/indiekku
 BIN_DIR=bin
 
-.PHONY: all build clean test deps tidy run
+.PHONY: all build clean test deps tidy run build-test
 
 all: build
 
@@ -35,3 +35,14 @@ run: build
 
 install:
 	$(GOBUILD) -o $(GOPATH)/bin/$(BINARY_NAME) $(BINARY_PATH)
+
+build-test: build
+	@echo "Shutting down existing server..."
+	-./$(BIN_DIR)/$(BINARY_NAME) shutdown 2>/dev/null || true
+	@sleep 1
+	@echo "Starting server..."
+	./$(BIN_DIR)/$(BINARY_NAME) serve
+	@sleep 2
+	@echo "Starting game server..."
+	./$(BIN_DIR)/$(BINARY_NAME) start
+	@echo "Done! Check status with: ./bin/indiekku ps"

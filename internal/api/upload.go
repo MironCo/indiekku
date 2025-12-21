@@ -47,18 +47,32 @@ func (h *ApiHandler) UploadRelease(c *gin.Context) {
 		return
 	}
 	tempFilePath := tempFile.Name()
-	tempFile.Close()
 	defer os.Remove(tempFilePath)
 
 	fmt.Printf("Saving to temp file: %s\n", tempFilePath)
 
-	if err := c.SaveUploadedFile(file, tempFilePath); err != nil {
-		fmt.Printf("Error saving uploaded file: %v\n", err)
+	// Open the uploaded file
+	src, err := file.Open()
+	if err != nil {
+		tempFile.Close()
+		fmt.Printf("Error opening uploaded file: %v\n", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": fmt.Sprintf("Failed to open uploaded file: %v", err),
+		})
+		return
+	}
+	defer src.Close()
+
+	// Copy the uploaded file to temp file
+	if _, err := io.Copy(tempFile, src); err != nil {
+		tempFile.Close()
+		fmt.Printf("Error copying uploaded file: %v\n", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": fmt.Sprintf("Failed to save uploaded file: %v", err),
 		})
 		return
 	}
+	tempFile.Close()
 
 	fmt.Printf("Extracting to: %s\n", server.DefaultServerDir)
 
