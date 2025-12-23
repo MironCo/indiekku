@@ -20,6 +20,7 @@ all: build
 build:
 	@echo "Updating embedded web UI..."
 	@cp web/index.html internal/api/webui_index.html
+	@cp web/history.html internal/api/webui_history.html
 	@echo "Updating embedded Dockerfile..."
 	@cp Dockerfile internal/docker/dockerfile_embed
 	mkdir -p $(BIN_DIR)

@@ -276,6 +276,7 @@ func (h *ApiHandler) SetupRouter() *gin.Engine {
 
 	// Web UI (no auth required - auth handled in the UI itself)
 	r.GET("/", h.ServeWebUI)
+	r.GET("/history", h.ServeHistoryUI)
 
 	// API routes (auth required)
 	api := r.Group("/api/v1")
