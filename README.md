@@ -9,6 +9,7 @@
 
 - **Simple CLI** - Start, stop, and list game servers with intuitive commands
 - **Web UI** - Modern web interface for uploading and managing server builds
+- **History Tracking** - SQLite-powered persistent history of server events and uploads
 - **API Key Authentication** - Secure API access with automatically generated keys
 - **Rolling Deployment Support** - Upload new builds without affecting running servers
 - **Docker-based** - Isolated server instances with automatic port management
@@ -73,6 +74,12 @@ Navigate to `http://localhost:8080` and login with your API key.
 - Stop servers with one click
 - Server list auto-refreshes every 5 seconds
 
+**View History:**
+- Navigate to the History page to view server events and upload history
+- Server Events: Track all server start/stop events with duration
+- Upload History: View all build uploads with success/failure status
+- History auto-refreshes every 10 seconds
+
 #### 3. CLI Commands
 
 ```bash
@@ -104,8 +111,10 @@ indiekku/
 │   ├── api/               # REST API handlers
 │   ├── client/            # HTTP client for CLI
 │   ├── docker/            # Docker container management
+│   ├── history/           # SQLite history tracking
 │   ├── server/            # Server binary detection
 │   └── state/             # In-memory state management
+├── web/                   # Web UI source files
 ├── game_server/           # Place your Unity server build here
 ├── Dockerfile             # Container image for Unity servers
 └── Makefile              # Build automation
@@ -113,11 +122,12 @@ indiekku/
 
 ## How It Works
 
-1. **Place your Unity server build** in the `game_server/` directory
+1. **Place your Unity server build** in the `game_server/` directory (or upload via Web UI)
 2. **indiekku automatically detects** executables (`.x86_64` or `.exe`)
 3. **Docker image is built** with Unity dependencies on first start
 4. **Each server runs** in an isolated container with host networking
 5. **State is tracked** in-memory with thread-safe operations
+6. **History is persisted** to SQLite database (`indiekku.db`) for server events and uploads
 
 ## API Endpoints
 
@@ -146,6 +156,17 @@ GET /api/v1/servers
 ### Stop Server
 ```bash
 DELETE /api/v1/servers/:container_name
+```
+
+### Get Server History
+```bash
+GET /api/v1/history/servers
+GET /api/v1/history/servers?container=legendary-sword  # Filter by container
+```
+
+### Get Upload History
+```bash
+GET /api/v1/history/uploads
 ```
 
 ## Development
@@ -185,41 +206,19 @@ Currently configured via constants:
 
 ## Roadmap
 
-- [WIP] Web dashboard 
+- [x] Web dashboard
+- [x] Persistent history tracking (SQLite)
 - [ ] Configuration file support
 - [ ] Player count tracking via heartbeat
 - [ ] Automatic server restart on crash
 - [ ] Multiple server build support
 - [ ] Metrics and monitoring
-- [ ] Persistent state (Redis/SQLite)
 
 ## Version
 
-**v0.4.0** - Single binary distribution and improved workflow
-- **Embedded Dockerfile** - Dockerfile is now embedded in the binary for true single-binary distribution
-- **Automatic Docker image rebuild** - Uploading a new server build now automatically rebuilds the Docker image
-- **Start Server button in Web UI** - Launch new game server instances directly from the web interface
-- Updated install script for streamlined deployment
-- Archive files (.zip, .tar.gz) now ignored in git
-- Improved .gitignore for cleaner repository
+**Current Version**: v0.5.0 - History tracking and persistence
 
-**v0.3.0** - Critical fixes and improvements
-- Fixed critical file upload permission errors
-- Enhanced web UI with drag-and-drop file upload
-- Added video game themed random server name generation (e.g., "legendary-sword", "crimson-dragon")
-- Improved server list table with auto-refresh and overflow handling
-- Full-width responsive UI layout
-- Fixed recursive binary detection for subdirectories in ZIP uploads
-- Fixed Docker container execute permissions for server binaries
-- Shutdown command now stops all running containers before API shutdown
-
-**v0.2.0** - Web UI and authentication
-- Added web UI for build management
-- API key authentication
-- File upload support for server builds
-- Rolling deployment capability
-
-**v0.1.0** - Initial release
+See [CHANGELOG.md](CHANGELOG.md) for full version history and release notes.
 
 ## License
 
