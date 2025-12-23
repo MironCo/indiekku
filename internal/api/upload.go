@@ -21,6 +21,10 @@ func (h *ApiHandler) UploadRelease(c *gin.Context) {
 	file, err := c.FormFile("server_build")
 	if err != nil {
 		fmt.Printf("Error getting form file: %v\n", err)
+		// Record failed upload
+		if h.historyManager != nil {
+			h.historyManager.RecordUpload("", 0, false, fmt.Sprintf("No file uploaded: %v", err))
+		}
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": fmt.Sprintf("No file uploaded: %v", err),
 		})
@@ -32,6 +36,10 @@ func (h *ApiHandler) UploadRelease(c *gin.Context) {
 	// Validate file extension
 	if !strings.HasSuffix(strings.ToLower(file.Filename), ".zip") {
 		fmt.Printf("Invalid file extension: %s\n", file.Filename)
+		// Record failed upload
+		if h.historyManager != nil {
+			h.historyManager.RecordUpload(file.Filename, file.Size, false, "File must be a ZIP archive")
+		}
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "File must be a ZIP archive",
 		})
@@ -42,6 +50,10 @@ func (h *ApiHandler) UploadRelease(c *gin.Context) {
 	tempFile, err := os.CreateTemp("", "indiekku-upload-*.zip")
 	if err != nil {
 		fmt.Printf("Error creating temp file: %v\n", err)
+		// Record failed upload
+		if h.historyManager != nil {
+			h.historyManager.RecordUpload(file.Filename, file.Size, false, fmt.Sprintf("Failed to create temp file: %v", err))
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": fmt.Sprintf("Failed to create temp file: %v", err),
 		})
@@ -57,6 +69,10 @@ func (h *ApiHandler) UploadRelease(c *gin.Context) {
 	if err != nil {
 		tempFile.Close()
 		fmt.Printf("Error opening uploaded file: %v\n", err)
+		// Record failed upload
+		if h.historyManager != nil {
+			h.historyManager.RecordUpload(file.Filename, file.Size, false, fmt.Sprintf("Failed to open uploaded file: %v", err))
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": fmt.Sprintf("Failed to open uploaded file: %v", err),
 		})
@@ -68,6 +84,10 @@ func (h *ApiHandler) UploadRelease(c *gin.Context) {
 	if _, err := io.Copy(tempFile, src); err != nil {
 		tempFile.Close()
 		fmt.Printf("Error copying uploaded file: %v\n", err)
+		// Record failed upload
+		if h.historyManager != nil {
+			h.historyManager.RecordUpload(file.Filename, file.Size, false, fmt.Sprintf("Failed to save uploaded file: %v", err))
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": fmt.Sprintf("Failed to save uploaded file: %v", err),
 		})
@@ -80,6 +100,10 @@ func (h *ApiHandler) UploadRelease(c *gin.Context) {
 	// Extract the zip file
 	if err := extractZipToServerDir(tempFilePath, server.DefaultServerDir); err != nil {
 		fmt.Printf("Error extracting ZIP: %v\n", err)
+		// Record failed upload
+		if h.historyManager != nil {
+			h.historyManager.RecordUpload(file.Filename, file.Size, false, fmt.Sprintf("Failed to extract ZIP file: %v", err))
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": fmt.Sprintf("Failed to extract ZIP file: %v", err),
 		})
@@ -92,6 +116,10 @@ func (h *ApiHandler) UploadRelease(c *gin.Context) {
 	// Rebuild Docker image with new server files
 	if err := docker.BuildImage(docker.DefaultImageName); err != nil {
 		fmt.Printf("Error rebuilding Docker image: %v\n", err)
+		// Record failed upload
+		if h.historyManager != nil {
+			h.historyManager.RecordUpload(file.Filename, file.Size, false, fmt.Sprintf("Failed to rebuild Docker image: %v", err))
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": fmt.Sprintf("Failed to rebuild Docker image: %v", err),
 		})
@@ -99,6 +127,13 @@ func (h *ApiHandler) UploadRelease(c *gin.Context) {
 	}
 
 	fmt.Printf("Docker image rebuilt successfully\n")
+
+	// Record successful upload
+	if h.historyManager != nil {
+		if err := h.historyManager.RecordUpload(file.Filename, file.Size, true, "Upload and Docker rebuild successful"); err != nil {
+			fmt.Printf("Warning: Failed to record upload history: %v\n", err)
+		}
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Release uploaded successfully",

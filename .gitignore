@@ -1,4 +1,5 @@
 deploy.sh
+deploy-example.sh
 /indiekku
 bin/
 
@@ -68,6 +69,11 @@ temp/
 
 # API key
 .indiekku_apikey
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
 
 # Archive files
 *.zip

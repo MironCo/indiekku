@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"indiekku/internal/docker"
+	"indiekku/internal/history"
 	"indiekku/internal/namegen"
 	"indiekku/internal/security"
 	"indiekku/internal/server"
@@ -16,19 +17,21 @@ import (
 
 // Handler handles HTTP requests for the game server API
 type ApiHandler struct {
-	stateManager *state.StateHandler
-	serverDir    string
-	imageName    string
-	apiKey       string
+	stateManager   *state.StateHandler
+	historyManager *history.HistoryManager
+	serverDir      string
+	imageName      string
+	apiKey         string
 }
 
 // NewHandler creates a new API handler
-func NewAPIHandler(stateManager *state.StateHandler, serverDir, imageName, apiKey string) *ApiHandler {
+func NewAPIHandler(stateManager *state.StateHandler, historyManager *history.HistoryManager, serverDir, imageName, apiKey string) *ApiHandler {
 	return &ApiHandler{
-		stateManager: stateManager,
-		serverDir:    serverDir,
-		imageName:    imageName,
-		apiKey:       apiKey,
+		stateManager:   stateManager,
+		historyManager: historyManager,
+		serverDir:      serverDir,
+		imageName:      imageName,
+		apiKey:         apiKey,
 	}
 }
 
@@ -132,6 +135,13 @@ func (h *ApiHandler) StartServer(c *gin.Context) {
 		StartedAt:     time.Now(),
 	})
 
+	// Record server start in history
+	if h.historyManager != nil {
+		if err := h.historyManager.RecordServerStart(containerName, port); err != nil {
+			fmt.Printf("Warning: Failed to record server start: %v\n", err)
+		}
+	}
+
 	c.JSON(http.StatusCreated, StartServerResponse{
 		ContainerName: containerName,
 		Port:          port,
@@ -144,7 +154,7 @@ func (h *ApiHandler) StopServer(c *gin.Context) {
 	containerName := c.Param("name")
 
 	// Check if server exists in state
-	_, err := h.stateManager.GetServer(containerName)
+	serverInfo, err := h.stateManager.GetServer(containerName)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": fmt.Sprintf("Server not found: %s", containerName),
@@ -158,6 +168,13 @@ func (h *ApiHandler) StopServer(c *gin.Context) {
 			"error": fmt.Sprintf("Failed to stop container: %v", err),
 		})
 		return
+	}
+
+	// Record server stop in history
+	if h.historyManager != nil {
+		if err := h.historyManager.RecordServerStop(containerName, serverInfo.Port, serverInfo.StartedAt); err != nil {
+			fmt.Printf("Warning: Failed to record server stop: %v\n", err)
+		}
 	}
 
 	// Remove from state
@@ -197,6 +214,57 @@ func (h *ApiHandler) Heartbeat(c *gin.Context) {
 	})
 }
 
+// GetServerHistory handles GET /history/servers
+func (h *ApiHandler) GetServerHistory(c *gin.Context) {
+	containerName := c.Query("container_name")
+	limit := 100 // default limit
+
+	if h.historyManager == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"error": "History tracking not enabled",
+		})
+		return
+	}
+
+	events, err := h.historyManager.GetServerEvents(containerName, limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": fmt.Sprintf("Failed to fetch server history: %v", err),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"events": events,
+		"count":  len(events),
+	})
+}
+
+// GetUploadHistory handles GET /history/uploads
+func (h *ApiHandler) GetUploadHistory(c *gin.Context) {
+	limit := 100 // default limit
+
+	if h.historyManager == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"error": "History tracking not enabled",
+		})
+		return
+	}
+
+	uploads, err := h.historyManager.GetUploadHistory(limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": fmt.Sprintf("Failed to fetch upload history: %v", err),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"uploads": uploads,
+		"count":   len(uploads),
+	})
+}
+
 // SetupRouter configures all API routes
 func (h *ApiHandler) SetupRouter() *gin.Engine {
 	r := gin.Default()
@@ -208,6 +276,7 @@ func (h *ApiHandler) SetupRouter() *gin.Engine {
 
 	// Web UI (no auth required - auth handled in the UI itself)
 	r.GET("/", h.ServeWebUI)
+	r.GET("/history", h.ServeHistoryUI)
 
 	// API routes (auth required)
 	api := r.Group("/api/v1")
@@ -218,6 +287,8 @@ func (h *ApiHandler) SetupRouter() *gin.Engine {
 		api.GET("/servers", h.ListServers)
 		api.POST("/heartbeat", h.Heartbeat)
 		api.POST("/upload", h.UploadRelease)
+		api.GET("/history/servers", h.GetServerHistory)
+		api.GET("/history/uploads", h.GetUploadHistory)
 	}
 
 	return r

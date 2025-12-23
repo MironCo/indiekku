@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Indiekku - History</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #fafafa;
+            color: #000000;
+            line-height: 1.6;
+            min-height: 100vh;
+            padding-top: 80px;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        @media (min-width: 1400px) {
+            .container {
+                padding: 2rem 4rem;
+            }
+        }
+
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #fafafa;
+            border-bottom: 2px solid #000000;
+            padding: 1rem 2rem;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        h1 {
+            color: #000000;
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .subtitle {
+            color: rgba(0, 0, 0, 0.6);
+            font-size: 0.875rem;
+            margin: 0;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .logout-btn {
+            width: auto;
+            padding: 0.5rem 1.5rem;
+            background: transparent;
+            color: #000000;
+            border: 2px solid #000000;
+            font-size: 0.875rem;
+            text-decoration: none;
+            text-align: center;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .logout-btn:hover {
+            background: #000000;
+            color: #ffffff;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 1200px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .history-section {
+            background: transparent;
+            padding: 2rem;
+            border: 2px solid #000000;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        h2 {
+            color: #000000;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .history-table th,
+        .history-table td {
+            padding: 0.875rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .history-table th {
+            background: rgba(0, 0, 0, 0.05);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+            color: rgba(0, 0, 0, 0.6);
+        }
+
+        .history-table tbody tr:hover {
+            background: rgba(0, 0, 0, 0.02);
+        }
+
+        .event-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .event-badge.start {
+            background: rgba(0, 200, 0, 0.1);
+            border: 1px solid rgba(0, 200, 0, 0.3);
+            color: rgba(0, 150, 0, 1);
+        }
+
+        .event-badge.stop {
+            background: rgba(200, 0, 0, 0.1);
+            border: 1px solid rgba(200, 0, 0, 0.3);
+            color: rgba(150, 0, 0, 1);
+        }
+
+        .event-badge.success {
+            background: rgba(0, 200, 0, 0.1);
+            border: 1px solid rgba(0, 200, 0, 0.3);
+            color: rgba(0, 150, 0, 1);
+        }
+
+        .event-badge.failed {
+            background: rgba(200, 0, 0, 0.1);
+            border: 1px solid rgba(200, 0, 0, 0.3);
+            color: rgba(150, 0, 0, 1);
+        }
+
+        .timestamp {
+            color: rgba(0, 0, 0, 0.5);
+            font-size: 0.875rem;
+            font-family: monospace;
+        }
+
+        .container-name {
+            font-weight: 600;
+            font-family: monospace;
+        }
+
+        .port {
+            font-family: monospace;
+            color: rgba(0, 0, 0, 0.7);
+        }
+
+        .duration {
+            color: rgba(0, 0, 0, 0.6);
+            font-size: 0.875rem;
+        }
+
+        .filename {
+            font-weight: 600;
+            color: #000000;
+        }
+
+        .filesize {
+            color: rgba(0, 0, 0, 0.6);
+            font-size: 0.875rem;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 3rem;
+            color: rgba(0, 0, 0, 0.5);
+            font-style: italic;
+        }
+
+        .login-page {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 60vh;
+        }
+
+        .login-page.hidden {
+            display: none;
+        }
+
+        .login-box {
+            background: transparent;
+            padding: 3rem;
+            border: 2px solid #000000;
+            max-width: 500px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .message {
+            padding: 1rem;
+            border-radius: 0;
+            margin-bottom: 1rem;
+            display: none;
+            border: 2px solid #000000;
+            background: #ffffff;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .message.error {
+            background: #ffffff;
+            border-color: #000000;
+            color: #000000;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: rgba(0, 0, 0, 0.6);
+            font-weight: 500;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+        }
+
+        input[type="password"] {
+            width: 100%;
+            padding: 0.875rem;
+            background: #ffffff;
+            border: 2px solid #000000;
+            border-radius: 0;
+            color: #000000;
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            transition: all 0.2s;
+        }
+
+        input[type="password"]:focus {
+            outline: none;
+            border-color: #000000;
+            background: #ffffff;
+        }
+
+        button {
+            width: 100%;
+            padding: 1rem;
+            background: #000000;
+            color: #ffffff;
+            border: none;
+            border-radius: 0;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        button:hover {
+            background: rgba(0, 0, 0, 0.85);
+        }
+
+        .dashboard {
+            display: none;
+        }
+
+        .dashboard.visible {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>indiekku</h1>
+            <span class="subtitle">Unity Server Management</span>
+        </div>
+        <div class="nav-links">
+            <a href="/" class="logout-btn" style="display: none; text-decoration: none;" id="dashboardLink">DASHBOARD</a>
+            <button class="logout-btn" id="logoutBtn" style="display: none;">LOGOUT</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Login Page -->
+        <div class="login-page" id="loginPage">
+            <div class="login-box">
+                <h2 style="margin-bottom: 1.5rem;">Login</h2>
+                <div id="authMessage" class="message"></div>
+                <form id="authForm">
+                    <label for="apiKey">API Key</label>
+                    <input
+                        type="password"
+                        id="apiKey"
+                        name="apiKey"
+                        placeholder="Enter your API key"
+                        required
+                    >
+                    <button type="submit">Login</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Dashboard -->
+        <div class="dashboard" id="dashboard">
+            <div class="dashboard-grid">
+                <!-- Server Events Section -->
+                <div class="history-section">
+                    <h2>Server Events</h2>
+                    <div id="server-events"></div>
+                </div>
+
+                <!-- Upload History Section -->
+                <div class="history-section">
+                    <h2>Upload History</h2>
+                    <div id="uploads"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let apiKey = '';
+        let isAuthenticated = false;
+
+        // Check if API key is stored
+        const storedKey = localStorage.getItem('indiekku_api_key');
+        if (storedKey) {
+            apiKey = storedKey;
+            verifyAuth();
+        }
+
+        // Auth form handler
+        document.getElementById('authForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const key = document.getElementById('apiKey').value;
+            apiKey = key;
+            await verifyAuth();
+        });
+
+        // Verify authentication
+        async function verifyAuth() {
+            try {
+                const response = await fetch('/api/v1/servers', {
+                    headers: {
+                        'Authorization': 'Bearer ' + apiKey
+                    }
+                });
+
+                if (response.ok) {
+                    localStorage.setItem('indiekku_api_key', apiKey);
+                    setAuthenticated(true);
+                    showMessage('authMessage', 'Authentication successful!', 'success');
+                } else {
+                    setAuthenticated(false);
+                    showMessage('authMessage', 'Invalid API key', 'error');
+                    localStorage.removeItem('indiekku_api_key');
+                }
+            } catch (error) {
+                setAuthenticated(false);
+                showMessage('authMessage', 'Failed to verify authentication', 'error');
+            }
+        }
+
+        // Set authenticated state
+        function setAuthenticated(authenticated) {
+            isAuthenticated = authenticated;
+            const loginPage = document.getElementById('loginPage');
+            const dashboard = document.getElementById('dashboard');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const dashboardLink = document.getElementById('dashboardLink');
+
+            if (authenticated) {
+                loginPage.classList.add('hidden');
+                dashboard.classList.add('visible');
+                logoutBtn.style.display = 'block';
+                dashboardLink.style.display = 'block';
+                loadHistory();
+                startPolling();
+            } else {
+                loginPage.classList.remove('hidden');
+                dashboard.classList.remove('visible');
+                logoutBtn.style.display = 'none';
+                dashboardLink.style.display = 'none';
+                stopPolling();
+            }
+        }
+
+        let pollingInterval = null;
+
+        function startPolling() {
+            loadHistory();
+            pollingInterval = setInterval(loadHistory, 10000); // Poll every 10 seconds
+        }
+
+        function stopPolling() {
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+            }
+        }
+
+        // Load history data
+        async function loadHistory() {
+            if (!isAuthenticated) return;
+
+            await Promise.all([
+                loadServerEvents(),
+                loadUploadHistory()
+            ]);
+        }
+
+        // Load server events
+        async function loadServerEvents() {
+            try {
+                const response = await fetch('/api/v1/history/servers', {
+                    headers: {
+                        'Authorization': 'Bearer ' + apiKey
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    displayServerEvents(data.events || []);
+                } else {
+                    console.error('Failed to load server events');
+                }
+            } catch (error) {
+                console.error('Error loading server events:', error);
+            }
+        }
+
+        // Display server events
+        function displayServerEvents(events) {
+            const container = document.getElementById('server-events');
+
+            if (!events || events.length === 0) {
+                container.innerHTML = '<div class="no-data">No server events recorded</div>';
+                return;
+            }
+
+            const tableHTML = `
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Event</th>
+                            <th>Container</th>
+                            <th>Port</th>
+                            <th>Duration</th>
+                            <th>Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${events.map(event => `
+                            <tr>
+                                <td>
+                                    <span class="event-badge ${event.event_type}">
+                                        ${event.event_type}
+                                    </span>
+                                </td>
+                                <td class="container-name">${escapeHtml(event.container_name)}</td>
+                                <td class="port">${escapeHtml(event.port)}</td>
+                                <td class="duration">${event.duration ? formatDuration(event.duration) : '-'}</td>
+                                <td class="timestamp">${formatTimestamp(event.timestamp)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+
+            container.innerHTML = tableHTML;
+        }
+
+        // Load upload history
+        async function loadUploadHistory() {
+            try {
+                const response = await fetch('/api/v1/history/uploads', {
+                    headers: {
+                        'Authorization': 'Bearer ' + apiKey
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    displayUploadHistory(data.uploads || []);
+                } else {
+                    console.error('Failed to load upload history');
+                }
+            } catch (error) {
+                console.error('Error loading upload history:', error);
+            }
+        }
+
+        // Display upload history
+        function displayUploadHistory(uploads) {
+            const container = document.getElementById('uploads');
+
+            if (!uploads || uploads.length === 0) {
+                container.innerHTML = '<div class="no-data">No upload history recorded</div>';
+                return;
+            }
+
+            const tableHTML = `
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Filename</th>
+                            <th>Size</th>
+                            <th>Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${uploads.map(upload => `
+                            <tr>
+                                <td>
+                                    <span class="event-badge ${upload.success ? 'success' : 'failed'}">
+                                        ${upload.success ? 'success' : 'failed'}
+                                    </span>
+                                </td>
+                                <td class="filename">${upload.filename ? escapeHtml(upload.filename) : '-'}</td>
+                                <td class="filesize">${upload.file_size ? formatBytes(upload.file_size) : '-'}</td>
+                                <td class="timestamp">${formatTimestamp(upload.timestamp)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+
+            container.innerHTML = tableHTML;
+        }
+
+        // Format duration in seconds
+        function formatDuration(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+
+            if (hours > 0) return `${hours}h ${minutes}m ${secs}s`;
+            if (minutes > 0) return `${minutes}m ${secs}s`;
+            return `${secs}s`;
+        }
+
+        // Format bytes
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Format timestamp
+        function formatTimestamp(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleString();
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Show message helper
+        function showMessage(elementId, text, type) {
+            const messageEl = document.getElementById(elementId);
+            messageEl.textContent = text;
+            messageEl.className = 'message show ' + type;
+
+            setTimeout(() => {
+                messageEl.classList.remove('show');
+            }, 5000);
+        }
+
+        // Logout handler
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            localStorage.removeItem('indiekku_api_key');
+            apiKey = '';
+            setAuthenticated(false);
+        });
+    </script>
+</body>
+</html>
