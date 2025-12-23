@@ -11,6 +11,7 @@ import (
 	"indiekku/internal/api"
 	"indiekku/internal/client"
 	"indiekku/internal/docker"
+	"indiekku/internal/history"
 	"indiekku/internal/security"
 	"indiekku/internal/server"
 	"indiekku/internal/state"
@@ -182,9 +183,21 @@ func runServe() {
 	// Initialize state handler
 	stateHandler := state.NewStateHandler()
 
+	// Initialize history manager
+	historyManager, err := history.NewHistoryManager("indiekku.db")
+	if err != nil {
+		fmt.Printf("Warning: Failed to initialize history tracking: %v\n", err)
+		fmt.Println("History tracking will be disabled, but the server will continue to run.")
+		historyManager = nil
+	} else {
+		defer historyManager.Close()
+		fmt.Println("✓ History tracking enabled (indiekku.db)")
+	}
+
 	// Create API handler
 	apiHandler := api.NewAPIHandler(
 		stateHandler,
+		historyManager,
 		server.DefaultServerDir,
 		docker.DefaultImageName,
 		loadedAPIKey,
