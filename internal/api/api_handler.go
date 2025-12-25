@@ -269,6 +269,9 @@ func (h *ApiHandler) GetUploadHistory(c *gin.Context) {
 func (h *ApiHandler) SetupRouter() *gin.Engine {
 	r := gin.Default()
 
+	// Apply security headers to all routes
+	r.Use(security.SecurityHeadersMiddleware())
+
 	// Health check (no auth required)
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
