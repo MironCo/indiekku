@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Indiekku - Server Logs</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #fafafa;
+            color: #000000;
+            line-height: 1.6;
+            min-height: 100vh;
+            padding-top: 80px;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        @media (min-width: 1400px) {
+            .container {
+                padding: 2rem 4rem;
+            }
+        }
+
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #fafafa;
+            border-bottom: 2px solid #000000;
+            padding: 1rem 2rem;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        h1 {
+            color: #000000;
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .subtitle {
+            color: rgba(0, 0, 0, 0.6);
+            font-size: 0.875rem;
+            margin: 0;
+        }
+
+        .back-btn {
+            width: auto;
+            padding: 0.5rem 1.5rem;
+            background: transparent;
+            color: #000000;
+            border: 2px solid #000000;
+            font-size: 0.875rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            text-decoration: none;
+            display: inline-block;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover {
+            background: #000000;
+            color: #ffffff;
+        }
+
+        .login-page {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 60vh;
+        }
+
+        .login-page.hidden {
+            display: none;
+        }
+
+        .login-box {
+            background: transparent;
+            padding: 3rem;
+            border: 2px solid #000000;
+            max-width: 500px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .logs-container {
+            display: none;
+        }
+
+        .logs-container.visible {
+            display: block;
+        }
+
+        .logs-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #000000;
+        }
+
+        h2 {
+            color: #000000;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: rgba(0, 0, 0, 0.6);
+            font-weight: 500;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+        }
+
+        input[type="password"] {
+            width: 100%;
+            padding: 0.875rem;
+            background: #ffffff;
+            border: 2px solid #000000;
+            border-radius: 0;
+            color: #000000;
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            transition: all 0.2s;
+        }
+
+        input[type="password"]:focus {
+            outline: none;
+            border-color: #000000;
+            background: #ffffff;
+        }
+
+        button {
+            width: 100%;
+            padding: 1rem;
+            background: #000000;
+            color: #ffffff;
+            border: none;
+            border-radius: 0;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        button:hover {
+            background: rgba(0, 0, 0, 0.85);
+            transform: translateY(-1px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: rgba(0, 0, 0, 0.2);
+            color: rgba(0, 0, 0, 0.3);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .message {
+            padding: 1rem;
+            border-radius: 0;
+            margin-bottom: 1rem;
+            display: none;
+            border: 2px solid #000000;
+            background: #ffffff;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .message.error {
+            background: #ffffff;
+            border-color: #000000;
+            color: #000000;
+        }
+
+        .controls {
+            background: transparent;
+            padding: 1.5rem;
+            border: 2px solid #000000;
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .control-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        select {
+            width: 100%;
+            padding: 0.875rem;
+            background: #ffffff;
+            border: 2px solid #000000;
+            border-radius: 0;
+            color: #000000;
+            font-size: 1rem;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #000000;
+            background: #ffffff;
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .control-btn {
+            padding: 0.875rem 1.5rem;
+            background: #ffffff;
+            border: 2px solid #000000;
+            color: #000000;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 600;
+            font-size: 0.875rem;
+            width: auto;
+        }
+
+        .control-btn:hover {
+            background: #000000;
+            color: #ffffff;
+        }
+
+        .control-btn.active {
+            background: #000000;
+            color: #ffffff;
+        }
+
+        .logs-section {
+            background: transparent;
+            padding: 2rem;
+            border: 2px solid #000000;
+            height: calc(100vh - 350px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .logs-viewer {
+            background: #000000;
+            color: #ffffff;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            padding: 1.5rem;
+            overflow-y: auto;
+            flex: 1;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .logs-viewer::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        .logs-viewer::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .logs-viewer::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 0;
+        }
+
+        .logs-viewer::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .no-logs {
+            text-align: center;
+            padding: 2rem;
+            color: rgba(255, 255, 255, 0.5);
+            font-style: italic;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .log-info {
+            margin-bottom: 0.75rem;
+            padding: 0.5rem 0.75rem;
+            background: rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            font-size: 0.75rem;
+        }
+
+        .log-info strong {
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>indiekku</h1>
+            <span class="subtitle">Server Logs</span>
+        </div>
+        <a href="/" class="back-btn" style="display: none;" id="backLink">BACK TO DASHBOARD</a>
+    </header>
+
+    <div class="container">
+        <!-- Login Page -->
+        <div class="login-page" id="loginPage">
+            <div class="login-box">
+                <h2 style="margin-bottom: 1.5rem;">Login Required</h2>
+
+                <div id="authMessage" class="message"></div>
+
+                <form id="authForm">
+                    <label for="apiKey">API Key</label>
+                    <input
+                        type="password"
+                        id="apiKey"
+                        name="apiKey"
+                        placeholder="Enter your API key"
+                        required
+                    >
+                    <button type="submit">Login</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Logs Container -->
+        <div class="logs-container" id="logsContainer">
+            <div class="controls">
+                <div class="control-group">
+                    <label for="serverSelect">SELECT SERVER</label>
+                    <select id="serverSelect">
+                        <option value="">Loading servers...</option>
+                    </select>
+                </div>
+                <div class="control-buttons">
+                    <button class="control-btn" id="refreshBtn" onclick="loadLogs()">REFRESH</button>
+                    <button class="control-btn" id="followBtn" onclick="toggleFollow()">FOLLOW</button>
+                    <button class="control-btn" id="clearBtn" onclick="clearLogs()">CLEAR</button>
+                </div>
+            </div>
+
+            <div class="logs-section">
+                <div class="log-info" id="logInfo" style="display: none;">
+                    <strong>Server:</strong> <span id="infoServer"></span> |
+                    <strong>Lines:</strong> <span id="infoLines">0</span> |
+                    <strong>Last updated:</strong> <span id="infoTime"></span>
+                </div>
+                <div class="logs-viewer" id="logsViewer">
+                    <div class="no-logs">Select a server to view logs</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let apiKey = '';
+        let isAuthenticated = false;
+        let isFollowing = false;
+        let followInterval = null;
+        let currentServer = '';
+
+        // Check if API key is stored
+        const storedKey = localStorage.getItem('indiekku_api_key');
+        if (storedKey) {
+            apiKey = storedKey;
+            verifyAuth();
+        }
+
+        // Auth form handler
+        document.getElementById('authForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const key = document.getElementById('apiKey').value;
+            apiKey = key;
+            await verifyAuth();
+        });
+
+        // Verify authentication
+        async function verifyAuth() {
+            try {
+                const response = await fetch('/api/v1/servers', {
+                    headers: {
+                        'Authorization': 'Bearer ' + apiKey
+                    }
+                });
+
+                if (response.ok) {
+                    localStorage.setItem('indiekku_api_key', apiKey);
+                    setAuthenticated(true);
+                } else {
+                    setAuthenticated(false);
+                    showMessage('authMessage', 'Invalid API key', 'error');
+                    localStorage.removeItem('indiekku_api_key');
+                }
+            } catch (error) {
+                setAuthenticated(false);
+                showMessage('authMessage', 'Failed to verify authentication', 'error');
+            }
+        }
+
+        // Set authenticated state
+        function setAuthenticated(authenticated) {
+            isAuthenticated = authenticated;
+            const loginPage = document.getElementById('loginPage');
+            const logsContainer = document.getElementById('logsContainer');
+            const backLink = document.getElementById('backLink');
+
+            if (authenticated) {
+                loginPage.classList.add('hidden');
+                logsContainer.classList.add('visible');
+                backLink.style.display = 'block';
+                loadServers();
+            } else {
+                loginPage.classList.remove('hidden');
+                logsContainer.classList.remove('visible');
+                backLink.style.display = 'none';
+            }
+        }
+
+        // Load servers for dropdown
+        async function loadServers() {
+            if (!isAuthenticated) return;
+
+            try {
+                const response = await fetch('/api/v1/servers', {
+                    headers: {
+                        'Authorization': 'Bearer ' + apiKey
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const servers = data.servers || [];
+
+                    const select = document.getElementById('serverSelect');
+
+                    if (servers.length === 0) {
+                        select.innerHTML = '<option value="">No servers running</option>';
+                        return;
+                    }
+
+                    select.innerHTML = '<option value="">Select a server...</option>' +
+                        servers.map(s =>
+                            `<option value="${escapeHtml(s.container_name)}">${escapeHtml(s.container_name)} (Port: ${s.port})</option>`
+                        ).join('');
+
+                    // Add change listener
+                    select.onchange = function() {
+                        currentServer = this.value;
+                        if (currentServer) {
+                            loadLogs();
+                        }
+                    };
+                } else {
+                    console.error('Failed to load servers');
+                }
+            } catch (error) {
+                console.error('Error loading servers:', error);
+            }
+        }
+
+        // Load logs for selected server
+        async function loadLogs() {
+            if (!currentServer) {
+                return;
+            }
+
+            const viewer = document.getElementById('logsViewer');
+            const logInfo = document.getElementById('logInfo');
+
+            viewer.innerHTML = '<div class="loading">Loading logs...</div>';
+
+            try {
+                const response = await fetch(`/api/v1/servers/${currentServer}/logs`, {
+                    headers: {
+                        'Authorization': 'Bearer ' + apiKey
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const logs = data.logs || '';
+
+                    if (logs.trim() === '') {
+                        viewer.innerHTML = '<div class="no-logs">No logs available</div>';
+                        logInfo.style.display = 'none';
+                    } else {
+                        viewer.textContent = logs;
+
+                        // Update info
+                        const lineCount = logs.split('\n').length;
+                        document.getElementById('infoServer').textContent = currentServer;
+                        document.getElementById('infoLines').textContent = lineCount;
+                        document.getElementById('infoTime').textContent = new Date().toLocaleTimeString();
+                        logInfo.style.display = 'block';
+
+                        // Auto-scroll to bottom if following
+                        if (isFollowing) {
+                            viewer.scrollTop = viewer.scrollHeight;
+                        }
+                    }
+                } else {
+                    const error = await response.json();
+                    viewer.innerHTML = `<div class="no-logs">Error: ${escapeHtml(error.error || 'Failed to load logs')}</div>`;
+                    logInfo.style.display = 'none';
+                }
+            } catch (error) {
+                viewer.innerHTML = `<div class="no-logs">Error: ${escapeHtml(error.message)}</div>`;
+                logInfo.style.display = 'none';
+            }
+        }
+
+        // Toggle follow mode
+        function toggleFollow() {
+            isFollowing = !isFollowing;
+            const followBtn = document.getElementById('followBtn');
+
+            if (isFollowing) {
+                followBtn.classList.add('active');
+                loadLogs(); // Load immediately
+                followInterval = setInterval(loadLogs, 2000); // Update every 2 seconds
+            } else {
+                followBtn.classList.remove('active');
+                if (followInterval) {
+                    clearInterval(followInterval);
+                    followInterval = null;
+                }
+            }
+        }
+
+        // Clear logs display
+        function clearLogs() {
+            const viewer = document.getElementById('logsViewer');
+            const logInfo = document.getElementById('logInfo');
+            viewer.innerHTML = '<div class="no-logs">Select a server to view logs</div>';
+            logInfo.style.display = 'none';
+            currentServer = '';
+            document.getElementById('serverSelect').value = '';
+
+            if (isFollowing) {
+                toggleFollow();
+            }
+        }
+
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Show message helper
+        function showMessage(elementId, text, type) {
+            const messageEl = document.getElementById(elementId);
+            messageEl.textContent = text;
+            messageEl.className = 'message show ' + type;
+
+            setTimeout(() => {
+                messageEl.classList.remove('show');
+            }, 5000);
+        }
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', () => {
+            if (followInterval) {
+                clearInterval(followInterval);
+            }
+        });
+    </script>
+</body>
+</html>

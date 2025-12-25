@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"indiekku/internal/docker"
@@ -265,9 +266,38 @@ func (h *ApiHandler) GetUploadHistory(c *gin.Context) {
 	})
 }
 
+// GetServerLogs retrieves logs for a specific server
+func (h *ApiHandler) GetServerLogs(c *gin.Context) {
+	containerName := c.Param("name")
+	if containerName == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Container name is required"})
+		return
+	}
+
+	// Get logs from Docker (last 100 lines)
+	logs, err := docker.GetContainerLogsSince(containerName, "5m")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to get logs: %v", err)})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"container_name": containerName,
+		"logs":           string(logs),
+	})
+}
+
 // SetupRouter configures all API routes
 func (h *ApiHandler) SetupRouter() *gin.Engine {
-	r := gin.Default()
+	// Set Gin to release mode
+	gin.SetMode(gin.ReleaseMode)
+
+	// Configure Gin to log to stdout (which gets redirected to indiekku.log by the daemon)
+	gin.DefaultWriter = os.Stdout
+
+	r := gin.New()
+	r.Use(gin.Logger())   // Add logger middleware
+	r.Use(gin.Recovery()) // Add recovery middleware
 
 	// Apply security headers to all routes
 	r.Use(security.SecurityHeadersMiddleware())
@@ -280,6 +310,7 @@ func (h *ApiHandler) SetupRouter() *gin.Engine {
 	// Web UI (no auth required - auth handled in the UI itself)
 	r.GET("/", h.ServeWebUI)
 	r.GET("/history", h.ServeHistoryUI)
+	r.GET("/logs", h.ServeLogsUI)
 
 	// API routes (auth required)
 	api := r.Group("/api/v1")
@@ -288,6 +319,7 @@ func (h *ApiHandler) SetupRouter() *gin.Engine {
 		api.POST("/servers/start", h.StartServer)
 		api.DELETE("/servers/:name", h.StopServer)
 		api.GET("/servers", h.ListServers)
+		api.GET("/servers/:name/logs", h.GetServerLogs)
 		api.POST("/heartbeat", h.Heartbeat)
 		api.POST("/upload", h.UploadRelease)
 		api.GET("/history/servers", h.GetServerHistory)

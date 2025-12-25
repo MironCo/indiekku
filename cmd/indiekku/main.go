@@ -61,13 +61,14 @@ func main() {
 func printUsage() {
 	fmt.Println("indiekku - Game server orchestration tool")
 	fmt.Println("\nUsage:")
-	fmt.Println("  indiekku serve        Start the API server (runs in background)")
-	fmt.Println("  indiekku shutdown     Stop the API server")
-	fmt.Println("  indiekku logs         View API server logs")
-	fmt.Println("  indiekku start [port] Start a game server container")
-	fmt.Println("  indiekku stop <name>  Stop a game server container")
-	fmt.Println("  indiekku ps           List running game server containers")
-	fmt.Println("  indiekku version      Show version information")
+	fmt.Println("  indiekku serve             Start the API server (runs in background)")
+	fmt.Println("  indiekku shutdown          Stop the API server")
+	fmt.Println("  indiekku logs              View API server logs")
+	fmt.Println("  indiekku logs <server>     View logs for a specific game server")
+	fmt.Println("  indiekku start [port]      Start a game server container")
+	fmt.Println("  indiekku stop <name>       Stop a game server container")
+	fmt.Println("  indiekku ps                List running game server containers")
+	fmt.Println("  indiekku version           Show version information")
 }
 
 func runVersion() {
@@ -375,6 +376,19 @@ func runPs() {
 }
 
 func runLogs() {
+	// Check if a server name was provided
+	if len(os.Args) > 2 {
+		// View logs for a specific game server
+		serverName := os.Args[2]
+		runServerLogs(serverName)
+		return
+	}
+
+	// View API server logs
+	runAPILogs()
+}
+
+func runAPILogs() {
 	// Check if log file exists
 	if _, err := os.Stat("indiekku.log"); os.IsNotExist(err) {
 		fmt.Println("No log file found. Has the server been started?")
@@ -409,5 +423,25 @@ func runLogs() {
 		if err != nil {
 			break
 		}
+	}
+}
+
+func runServerLogs(serverName string) {
+	fmt.Printf("Fetching logs for %s...\n\n", serverName)
+
+	// Get and stream Docker logs
+	cmd, err := docker.GetContainerLogs(serverName, true, "100")
+	if err != nil {
+		fmt.Printf("Failed to get logs: %v\n", err)
+		os.Exit(1)
+	}
+
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		fmt.Printf("\nFailed to stream logs: %v\n", err)
+		fmt.Println("\nTip: Use 'indiekku ps' to see available servers")
+		os.Exit(1)
 	}
 }

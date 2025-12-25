@@ -437,6 +437,7 @@
             <span class="subtitle">Unity Server Management</span>
         </div>
         <div style="display: flex; gap: 1rem; align-items: center;">
+            <a href="/logs" class="logout-btn" style="display: none; width: auto; text-decoration: none; text-align: center;" id="logsLink">LOGS</a>
             <a href="/history" class="logout-btn" style="display: none; width: auto; text-decoration: none; text-align: center;" id="historyLink">HISTORY</a>
             <button class="logout-btn" id="logoutBtn" style="display: none;">LOGOUT</button>
         </div>
@@ -568,12 +569,14 @@
             const loginPage = document.getElementById('loginPage');
             const dashboard = document.getElementById('dashboard');
             const logoutBtn = document.getElementById('logoutBtn');
+            const logsLink = document.getElementById('logsLink');
             const historyLink = document.getElementById('historyLink');
 
             if (authenticated) {
                 loginPage.classList.add('hidden');
                 dashboard.classList.add('visible');
                 logoutBtn.style.display = 'block';
+                logsLink.style.display = 'block';
                 historyLink.style.display = 'block';
                 loadServers(); // Load servers when authenticated
                 startServerPolling(); // Start polling for server updates
@@ -581,6 +584,7 @@
                 loginPage.classList.remove('hidden');
                 dashboard.classList.remove('visible');
                 logoutBtn.style.display = 'none';
+                logsLink.style.display = 'none';
                 historyLink.style.display = 'none';
                 stopServerPolling(); // Stop polling when logged out
             }
