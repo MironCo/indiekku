@@ -19,9 +19,9 @@ func SecurityHeadersMiddleware() gin.HandlerFunc {
 
 		// Content Security Policy
 		// Allow 'self' for scripts/styles, and unpkg.com for HTMX
-		// 'unsafe-inline' needed for inline styles in the brutalist UI
+		// 'unsafe-inline' needed for inline styles and scripts in the brutalist UI
 		// Note: For a local dev tool, this is acceptable. For production, use nonces/hashes.
-		c.Header("Content-Security-Policy", "default-src 'self'; script-src 'self' https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
+		c.Header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
 
 		// Permissions policy (disable unnecessary features)
 		c.Header("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
