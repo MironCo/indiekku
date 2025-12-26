@@ -139,7 +139,6 @@ func (c *Client) StopServer(containerName string) error {
 
 // ServerInfo represents information about a running server
 type ServerInfo struct {
-	ContainerID   string    `json:"container_id"`
 	ContainerName string    `json:"container_name"`
 	Port          string    `json:"port"`
 	PlayerCount   int       `json:"player_count"`

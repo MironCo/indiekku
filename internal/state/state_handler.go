@@ -8,7 +8,6 @@ import (
 
 // ServerInfo represents a running game server container
 type ServerInfo struct {
-	ContainerID   string    `json:"container_id"`
 	ContainerName string    `json:"container_name"`
 	Port          string    `json:"port"`
 	PlayerCount   int       `json:"player_count"`

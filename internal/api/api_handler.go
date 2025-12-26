@@ -195,6 +195,21 @@ func (h *ApiHandler) ListServers(c *gin.Context) {
 	})
 }
 
+// GetServer handles GET /servers/:name
+func (h *ApiHandler) GetServer(c *gin.Context) {
+	containerName := c.Param("name")
+
+	server, err := h.stateManager.GetServer(containerName)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": fmt.Sprintf("Server not found: %s", containerName),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, server)
+}
+
 // Heartbeat handles POST /heartbeat
 func (h *ApiHandler) Heartbeat(c *gin.Context) {
 	var req HeartbeatRequest
@@ -319,6 +334,7 @@ func (h *ApiHandler) SetupRouter() *gin.Engine {
 		api.POST("/servers/start", h.StartServer)
 		api.DELETE("/servers/:name", h.StopServer)
 		api.GET("/servers", h.ListServers)
+		api.GET("/servers/:name", h.GetServer)
 		api.GET("/servers/:name/logs", h.GetServerLogs)
 		api.POST("/heartbeat", h.Heartbeat)
 		api.POST("/upload", h.UploadRelease)
