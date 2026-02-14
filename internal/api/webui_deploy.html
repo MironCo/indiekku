@@ -85,6 +85,13 @@
                         <input type="file" id="dockerfileInput" accept="Dockerfile,*">
                     </div>
                 </div>
+
+                <!-- Port Configuration -->
+                <div class="deploy-section">
+                    <h3>Internal Port</h3>
+                    <p style="color: #888; font-size: 0.9rem; margin-bottom: 0.5rem;">Port your server listens on inside the container</p>
+                    <input type="number" id="defaultPort" placeholder="7777" min="1" max="65535" style="width: 100%; padding: 0.75rem; background: #1a1a2e; border: 1px solid #333; color: #fff; border-radius: 4px;">
+                </div>
             </div>
 
             <div class="deploy-actions">
@@ -97,9 +104,25 @@
     <script>
         let apiKey = '';
         let isAuthenticated = false;
+        let csrfToken = '';
         let selectedFile = null;
         let selectedDockerfile = null;
         let selectedPreset = 'binary';
+
+        // Fetch CSRF token for state-changing requests
+        async function fetchCSRFToken() {
+            try {
+                const response = await fetch('/api/v1/csrf-token', {
+                    headers: { 'Authorization': 'Bearer ' + apiKey }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    csrfToken = data.csrf_token;
+                }
+            } catch (error) {
+                console.error('Failed to fetch CSRF token:', error);
+            }
+        }
 
         // Check if API key is stored
         const storedKey = localStorage.getItem('indiekku_api_key');
@@ -151,6 +174,7 @@
                 loginPage.classList.add('hidden');
                 dashboard.classList.add('visible');
                 navLinks.style.display = 'flex';
+                fetchCSRFToken();
                 loadPresets();
             } else {
                 loginPage.classList.remove('hidden');
@@ -324,6 +348,12 @@
                 formData.append('dockerfile', selectedDockerfile);
             }
 
+            // Add default port if specified
+            const defaultPort = document.getElementById('defaultPort').value;
+            if (defaultPort) {
+                formData.append('default_port', defaultPort);
+            }
+
             try {
                 const xhr = new XMLHttpRequest();
 
@@ -363,6 +393,7 @@
 
                 xhr.open('POST', '/api/v1/upload');
                 xhr.setRequestHeader('Authorization', 'Bearer ' + apiKey);
+                xhr.setRequestHeader('X-CSRF-Token', csrfToken);
                 xhr.send(formData);
             } catch (error) {
                 showMessage('deployMessage', 'Deploy failed: ' + error.message, 'error');

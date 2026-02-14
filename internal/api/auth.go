@@ -1,6 +1,7 @@
 package api
 
 import (
+	"crypto/subtle"
 	"net/http"
 
 	"indiekku/internal/security"
@@ -23,8 +24,8 @@ func (h *ApiHandler) HandleLogin(c *gin.Context) {
 		return
 	}
 
-	// Validate API key
-	if req.APIKey != h.apiKey {
+	// Validate API key using constant-time comparison to prevent timing attacks
+	if subtle.ConstantTimeCompare([]byte(req.APIKey), []byte(h.apiKey)) != 1 {
 		// Check if htmx request
 		if c.GetHeader("HX-Request") == "true" {
 			c.Header("Content-Type", "text/html; charset=utf-8")
@@ -34,6 +35,10 @@ func (h *ApiHandler) HandleLogin(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid API key"})
 		return
 	}
+
+	// Session rotation: invalidate all existing sessions before creating new one
+	// This ensures that if the API key was compromised, old sessions are cleared
+	h.sessionStore.InvalidateAllSessions()
 
 	// Create session
 	session, err := h.sessionStore.CreateSession()

@@ -2,6 +2,7 @@ package security
 
 import (
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/hex"
 	"net/http"
 	"sync"
@@ -99,9 +100,19 @@ func (s *SessionStore) DeleteSession(id string) {
 	s.mu.Unlock()
 }
 
-// ValidateAPIKey validates an API key against the stored key
+// InvalidateAllSessions removes all active sessions (for session rotation on login)
+func (s *SessionStore) InvalidateAllSessions() {
+	s.mu.Lock()
+	s.sessions = make(map[string]*Session)
+	s.mu.Unlock()
+}
+
+// ValidateAPIKey validates an API key against the stored key using constant-time comparison
 func (s *SessionStore) ValidateAPIKey(key string) bool {
-	return key != "" && s.apiKey != "" && key == s.apiKey
+	if key == "" || s.apiKey == "" {
+		return false
+	}
+	return subtle.ConstantTimeCompare([]byte(key), []byte(s.apiKey)) == 1
 }
 
 // cleanupExpired periodically removes expired sessions
@@ -159,31 +170,33 @@ func SessionAuthMiddleware(store *SessionStore) gin.HandlerFunc {
 	}
 }
 
-// SetSessionCookie sets the session cookie on the response
+// SetSessionCookie sets the session cookie on the response with secure defaults
 func SetSessionCookie(c *gin.Context, session *Session) {
 	// Calculate max age in seconds
 	maxAge := int(time.Until(session.ExpiresAt).Seconds())
 
-	c.SetCookie(
-		SessionCookieName,
-		session.ID,
-		maxAge,
-		"/",
-		"",    // domain (empty = current host)
-		false, // secure (false for localhost, set true in production)
-		true,  // httpOnly
-	)
+	cookie := &http.Cookie{
+		Name:     SessionCookieName,
+		Value:    session.ID,
+		Path:     "/",
+		MaxAge:   maxAge,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode, // Prevents CSRF via cross-site navigation
+		Secure:   false,                // Set to true in production with HTTPS
+	}
+	http.SetCookie(c.Writer, cookie)
 }
 
 // ClearSessionCookie clears the session cookie
 func ClearSessionCookie(c *gin.Context) {
-	c.SetCookie(
-		SessionCookieName,
-		"",
-		-1, // max age -1 = delete
-		"/",
-		"",
-		false,
-		true,
-	)
+	cookie := &http.Cookie{
+		Name:     SessionCookieName,
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1, // Delete cookie
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   false,
+	}
+	http.SetCookie(c.Writer, cookie)
 }

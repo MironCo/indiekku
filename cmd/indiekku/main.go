@@ -23,8 +23,8 @@ var (
 
 const (
 	defaultPort    = "7777"
-	defaultAPIPort = "8080"
-	defaultAPIURL  = "http://localhost:8080"
+	defaultAPIPort = "3000"
+	defaultAPIURL  = "http://localhost:3000"
 	pidFile        = "indiekku.pid"
 )
 
@@ -137,7 +137,7 @@ func runServe() {
 		fmt.Printf("  Keep this key secure - you'll need it to authenticate API requests.\n\n")
 		fmt.Printf("  Example usage:\n")
 		fmt.Printf("    curl -H \"Authorization: Bearer %s\" \\\n", apiKey)
-		fmt.Printf("         http://localhost:8080/api/v1/servers\n\n")
+		fmt.Printf("         http://localhost:3000/api/v1/servers\n\n")
 		fmt.Println(strings.Repeat("=", 70))
 		fmt.Println()
 	}

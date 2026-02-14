@@ -5,7 +5,13 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
+)
+
+const (
+	defaultBasePort = 7777
+	configFileName  = "config"
 )
 
 const DockerfilesDir = "dockerfiles"
@@ -208,4 +214,29 @@ func GetActiveDockerfileName() string {
 	}
 
 	return "custom"
+}
+
+// GetDefaultPort returns the configured default port for containers
+func GetDefaultPort() int {
+	configPath := filepath.Join(DockerfilesDir, configFileName)
+	content, err := os.ReadFile(configPath)
+	if err != nil {
+		return defaultBasePort
+	}
+
+	port, err := strconv.Atoi(strings.TrimSpace(string(content)))
+	if err != nil {
+		return defaultBasePort
+	}
+	return port
+}
+
+// SetDefaultPort saves the default port for containers
+func SetDefaultPort(port int) error {
+	if err := EnsureDockerfilesDir(); err != nil {
+		return err
+	}
+
+	configPath := filepath.Join(DockerfilesDir, configFileName)
+	return os.WriteFile(configPath, []byte(strconv.Itoa(port)), 0644)
 }

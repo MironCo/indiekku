@@ -22,6 +22,7 @@ type ApiHandler struct {
 	stateManager   *state.StateHandler
 	historyManager *history.HistoryManager
 	sessionStore   *security.SessionStore
+	csrfManager    *security.CSRFManager
 	serverDir      string
 	imageName      string
 	apiKey         string
@@ -33,10 +34,21 @@ func NewAPIHandler(stateManager *state.StateHandler, historyManager *history.His
 		stateManager:   stateManager,
 		historyManager: historyManager,
 		sessionStore:   security.NewSessionStore(apiKey),
+		csrfManager:    security.NewCSRFManager(),
 		serverDir:      serverDir,
 		imageName:      imageName,
 		apiKey:         apiKey,
 	}
+}
+
+// GetCSRFToken generates and returns a new CSRF token
+func (h *ApiHandler) GetCSRFToken(c *gin.Context) {
+	token, err := h.csrfManager.GenerateToken()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate CSRF token"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"csrf_token": token})
 }
 
 // StartServerRequest represents the request body for starting a server
@@ -88,7 +100,7 @@ func (h *ApiHandler) StartServer(c *gin.Context) {
 	// Determine port
 	port := req.Port
 	if port == "" {
-		port = h.stateManager.GetNextAvailablePort(7777)
+		port = h.stateManager.GetNextAvailablePort(docker.GetDefaultPort())
 	} else if h.stateManager.IsPortInUse(port) {
 		c.JSON(http.StatusConflict, gin.H{
 			"error": fmt.Sprintf("Port %s is already in use", port),
@@ -153,12 +165,16 @@ func (h *ApiHandler) StartServer(c *gin.Context) {
 	}
 
 	// Run the container with config
+	// ContainerPort is the internal port the app listens on (from config)
+	// Port is the external port we expose
+	containerPort := fmt.Sprintf("%d", docker.GetDefaultPort())
 	cfg := docker.ContainerConfig{
-		Name:      containerName,
-		ImageName: h.imageName,
-		Port:      port,
-		Command:   command,
-		Args:      args,
+		Name:          containerName,
+		ImageName:     h.imageName,
+		Port:          port,
+		ContainerPort: containerPort,
+		Command:       command,
+		Args:          args,
 	}
 	if err := docker.RunContainer(cfg); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -413,21 +429,29 @@ func (h *ApiHandler) SetupRouter() *gin.Engine {
 	api := r.Group("/api/v1")
 	api.Use(security.AuthMiddleware(h.apiKey))
 	{
-		api.POST("/servers/start", h.StartServer)
-		api.DELETE("/servers/:name", h.StopServer)
+		// CSRF token endpoint (GET, no CSRF check needed)
+		api.GET("/csrf-token", h.GetCSRFToken)
+
+		// Read-only endpoints (no CSRF protection needed)
 		api.GET("/servers", h.ListServers)
 		api.GET("/servers/:name", h.GetServer)
 		api.GET("/servers/:name/logs", h.GetServerLogs)
-		api.POST("/heartbeat", h.Heartbeat)
-		api.POST("/upload", h.UploadRelease)
 		api.GET("/history/servers", h.GetServerHistory)
 		api.GET("/history/uploads", h.GetUploadHistory)
-
-		// Dockerfile management
 		api.GET("/dockerfiles/presets", h.ListDockerfilePresets)
 		api.GET("/dockerfiles/active", h.GetActiveDockerfile)
-		api.POST("/dockerfiles/active", h.SetActiveDockerfile)
 		api.GET("/dockerfiles/history", h.GetDockerfileHistory)
+
+		// State-changing endpoints (CSRF protection required)
+		csrfProtected := api.Group("")
+		csrfProtected.Use(security.CSRFMiddleware(h.csrfManager))
+		{
+			csrfProtected.POST("/servers/start", h.StartServer)
+			csrfProtected.DELETE("/servers/:name", h.StopServer)
+			csrfProtected.POST("/heartbeat", h.Heartbeat)
+			csrfProtected.POST("/upload", h.UploadRelease)
+			csrfProtected.POST("/dockerfiles/active", h.SetActiveDockerfile)
+		}
 	}
 
 	return r

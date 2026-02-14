@@ -16,11 +16,12 @@ const (
 
 // ContainerConfig holds all container run options
 type ContainerConfig struct {
-	Name      string   // Container name
-	ImageName string   // Docker image name
-	Port      string   // Port to expose (used for tracking, not necessarily passed to container)
-	Command   string   // Override CMD (empty = use Dockerfile CMD)
-	Args      []string // Override args (empty = use Dockerfile defaults)
+	Name          string   // Container name
+	ImageName     string   // Docker image name
+	Port          string   // External port to expose
+	ContainerPort string   // Internal port the app listens on (from Dockerfile EXPOSE or config)
+	Command       string   // Override CMD (empty = use Dockerfile CMD)
+	Args          []string // Override args (empty = use Dockerfile defaults)
 }
 
 // CheckDockerInstalled checks if Docker is installed and running
@@ -68,7 +69,19 @@ func BuildImageFromContent(imageName, dockerfileContent string) error {
 // Returns an error if the container fails to start or exits immediately
 func RunContainer(cfg ContainerConfig) error {
 	// Don't use --rm initially so we can get logs if it fails
-	args := []string{"run", "-d", "--network", "host", "--name", cfg.Name, cfg.ImageName}
+	args := []string{"run", "-d"}
+
+	// Use bridge networking with port mapping
+	// Maps external port (cfg.Port) to internal container port (cfg.ContainerPort)
+	containerPort := cfg.ContainerPort
+	if containerPort == "" {
+		containerPort = cfg.Port // fallback to same port if not specified
+	}
+	if cfg.Port != "" && containerPort != "" {
+		args = append(args, "-p", cfg.Port+":"+containerPort)
+	}
+
+	args = append(args, "--name", cfg.Name, cfg.ImageName)
 
 	// Add command and args if specified
 	if cfg.Command != "" {

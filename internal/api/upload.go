@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"indiekku/internal/docker"
@@ -47,6 +48,14 @@ func (h *ApiHandler) UploadRelease(c *gin.Context) {
 	// Handle Dockerfile configuration if provided (after getting server_build)
 	preset := c.PostForm("preset")
 	dockerfileHeader, _ := c.FormFile("dockerfile")
+	defaultPortStr := c.PostForm("default_port")
+
+	// Save default port if provided
+	if defaultPortStr != "" {
+		if port, err := strconv.Atoi(defaultPortStr); err == nil && port > 0 && port < 65536 {
+			docker.SetDefaultPort(port)
+		}
+	}
 
 	if dockerfileHeader != nil {
 		dockerfileFile, err := dockerfileHeader.Open()
