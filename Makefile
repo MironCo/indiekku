@@ -31,6 +31,12 @@ build:
 	$(GOBUILD) -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/$(BINARY_NAME) $(BINARY_PATH)
 
 clean:
+	@echo "Shutting down indiekku server..."
+	-./$(BIN_DIR)/$(BINARY_NAME) shutdown 2>/dev/null || true
+	@sleep 1
+	@echo "Killing any remaining indiekku processes..."
+	-pkill -9 indiekku 2>/dev/null || true
+	@echo "Cleaning build artifacts and data..."
 	$(GOCLEAN)
 	rm -rf $(BIN_DIR)
 	rm -rf dockerfiles/
@@ -38,7 +44,10 @@ clean:
 	@# Restore .gitkeep
 	@touch game_server/.gitkeep
 	rm -f indiekku.db
-	@echo "Cleaned: bin/, dockerfiles/, game_server/*, indiekku.db"
+	rm -f .indiekku_apikey
+	rm -f indiekku.pid
+	rm -f indiekku.log
+	@echo "Cleaned: bin/, dockerfiles/, game_server/*, indiekku.db, .indiekku_apikey, indiekku.pid, indiekku.log"
 
 test:
 	$(GOTEST) -v ./...
