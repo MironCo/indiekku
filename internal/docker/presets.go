@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -38,7 +39,8 @@ USER appuser
 EXPOSE 7777
 `
 
-const genericDockerfile = `FROM --platform=linux/amd64 debian:13-slim
+// binaryDockerfileTemplate uses %s for platform (linux/amd64 or linux/arm64)
+const binaryDockerfileTemplate = `FROM --platform=%s debian:13-slim
 
 # Create non-root user
 RUN useradd -m -u 10001 appuser
@@ -54,25 +56,34 @@ USER appuser
 EXPOSE 7777
 `
 
-// Presets maps preset names to their Dockerfile content
-var Presets = map[string]string{
-	"unity":   unityDockerfile,
-	"generic": genericDockerfile,
+// GetBinaryDockerfile returns a Dockerfile for the current host architecture
+func GetBinaryDockerfile() string {
+	platform := "linux/amd64"
+	if runtime.GOARCH == "arm64" {
+		platform = "linux/arm64"
+	}
+	return fmt.Sprintf(binaryDockerfileTemplate, platform)
 }
 
+// PresetNames lists available preset names
+var PresetNames = []string{"unity", "binary"}
+
 // GetPreset returns the Dockerfile content for a preset name
+// Binary preset is generated dynamically based on host architecture
 func GetPreset(name string) (string, bool) {
-	content, ok := Presets[name]
-	return content, ok
+	switch name {
+	case "unity":
+		return unityDockerfile, true
+	case "binary":
+		return GetBinaryDockerfile(), true
+	default:
+		return "", false
+	}
 }
 
 // ListPresets returns all available preset names
 func ListPresets() []string {
-	names := make([]string, 0, len(Presets))
-	for name := range Presets {
-		names = append(names, name)
-	}
-	return names
+	return PresetNames
 }
 
 // EnsureDockerfilesDir creates the dockerfiles directory and writes presets if missing
@@ -82,7 +93,8 @@ func EnsureDockerfilesDir() error {
 	}
 
 	// Write preset files if they don't exist
-	for name, content := range Presets {
+	for _, name := range PresetNames {
+		content, _ := GetPreset(name)
 		path := filepath.Join(DockerfilesDir, name+".Dockerfile")
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			if err := os.WriteFile(path, []byte(content), 0644); err != nil {
@@ -95,15 +107,15 @@ func EnsureDockerfilesDir() error {
 }
 
 // GetActiveDockerfile returns the content of the currently active Dockerfile
-// Falls back to unity preset if no active Dockerfile exists
+// Falls back to binary preset if no active Dockerfile exists
 func GetActiveDockerfile() (string, error) {
 	activePath := filepath.Join(DockerfilesDir, "active.Dockerfile")
 
 	content, err := os.ReadFile(activePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			// Fall back to unity preset
-			return unityDockerfile, nil
+			// Fall back to binary preset (auto-detects host architecture)
+			return GetBinaryDockerfile(), nil
 		}
 		return "", fmt.Errorf("failed to read active Dockerfile: %w", err)
 	}
@@ -188,7 +200,8 @@ func GetActiveDockerfileName() string {
 
 	// Check if it matches a preset
 	contentStr := string(content)
-	for name, preset := range Presets {
+	for _, name := range PresetNames {
+		preset, _ := GetPreset(name)
 		if contentStr == preset {
 			return name
 		}

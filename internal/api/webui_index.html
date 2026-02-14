@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Indiekku - Server Management</title>
-    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
@@ -14,6 +13,7 @@
             <span class="subtitle">Container Management</span>
         </div>
         <div class="nav-links">
+            <a href="/deploy" class="logout-btn" style="display: none;" id="deployLink">DEPLOY</a>
             <a href="/logs" class="logout-btn" style="display: none;" id="logsLink">LOGS</a>
             <a href="/history" class="logout-btn" style="display: none;" id="historyLink">HISTORY</a>
             <button class="logout-btn" id="logoutBtn" style="display: none;">LOGOUT</button>
@@ -44,78 +44,13 @@
 
         <!-- Dashboard -->
         <div class="dashboard" id="dashboard">
-            <div class="dashboard-grid">
-                <!-- Running Servers Section -->
-                <div class="servers-section">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                        <h2 style="margin-bottom: 0;">Running Servers</h2>
-                        <button class="stop-button" onclick="spawnServer()" style="width: auto;">Start Server</button>
-                    </div>
-                    <div id="serversTable"></div>
+            <!-- Running Servers Section -->
+            <div class="servers-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h2 style="margin-bottom: 0;">Running Servers</h2>
+                    <button class="stop-button" onclick="spawnServer()" style="width: auto;">Start Server</button>
                 </div>
-
-                <div class="upload-section">
-                <h2>Upload New Release</h2>
-                <p style="color: rgba(0, 0, 0, 0.6); margin-bottom: 1.5rem;">
-                    Upload a ZIP file containing your application
-                </p>
-
-                <div id="uploadMessage" class="message"></div>
-
-                <form id="uploadForm">
-                    <!-- Dockerfile Selection -->
-                    <div style="margin-bottom: 1.5rem;">
-                        <label>Dockerfile</label>
-                        <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.5rem;">
-                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; text-transform: none; font-size: 1rem; color: #000;">
-                                <input type="radio" name="dockerfileOption" value="unity" checked style="width: auto; margin: 0;">
-                                Unity (default)
-                            </label>
-                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; text-transform: none; font-size: 1rem; color: #000;">
-                                <input type="radio" name="dockerfileOption" value="generic" style="width: auto; margin: 0;">
-                                Generic
-                            </label>
-                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; text-transform: none; font-size: 1rem; color: #000;">
-                                <input type="radio" name="dockerfileOption" value="custom" style="width: auto; margin: 0;">
-                                Custom
-                            </label>
-                        </div>
-                        <div id="customDockerfileSection" style="display: none; margin-top: 0.5rem;">
-                            <input type="file" id="dockerfileInput" accept="" style="margin-bottom: 0;">
-                            <p style="font-size: 0.8rem; color: rgba(0,0,0,0.5); margin-top: 0.25rem;">Upload your custom Dockerfile</p>
-                        </div>
-                    </div>
-
-                    <div id="dropZone" class="drop-zone">
-                        <div class="drop-zone-content">
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                <polyline points="17 8 12 3 7 8"></polyline>
-                                <line x1="12" y1="3" x2="12" y2="15"></line>
-                            </svg>
-                            <p class="drop-zone-text">Drag and drop your ZIP file here</p>
-                            <p class="drop-zone-or">or</p>
-                            <label for="serverZip" class="drop-zone-button">Browse Files</label>
-                        </div>
-                        <input
-                            type="file"
-                            id="serverZip"
-                            name="server_build"
-                            accept=".zip"
-                            required
-                            style="display: none;"
-                        >
-                    </div>
-
-                    <div class="file-info" id="fileInfo"></div>
-
-                    <div class="progress" id="uploadProgress">
-                        <div class="progress-bar" id="progressBar"></div>
-                    </div>
-
-                    <button type="submit" id="uploadButton">Upload Release</button>
-                </form>
-            </div>
+                <div id="serversTable"></div>
             </div>
         </div>
     </div>
@@ -130,18 +65,6 @@
             apiKey = storedKey;
             verifyAuth();
         }
-
-        // Dockerfile option handling
-        document.querySelectorAll('input[name="dockerfileOption"]').forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                const customSection = document.getElementById('customDockerfileSection');
-                if (e.target.value === 'custom') {
-                    customSection.style.display = 'block';
-                } else {
-                    customSection.style.display = 'none';
-                }
-            });
-        });
 
         // Auth form handler
         document.getElementById('authForm').addEventListener('submit', async (e) => {
@@ -181,6 +104,7 @@
             const loginPage = document.getElementById('loginPage');
             const dashboard = document.getElementById('dashboard');
             const logoutBtn = document.getElementById('logoutBtn');
+            const deployLink = document.getElementById('deployLink');
             const logsLink = document.getElementById('logsLink');
             const historyLink = document.getElementById('historyLink');
 
@@ -188,6 +112,7 @@
                 loginPage.classList.add('hidden');
                 dashboard.classList.add('visible');
                 logoutBtn.style.display = 'block';
+                deployLink.style.display = 'block';
                 logsLink.style.display = 'block';
                 historyLink.style.display = 'block';
                 loadServers();
@@ -196,6 +121,7 @@
                 loginPage.classList.remove('hidden');
                 dashboard.classList.remove('visible');
                 logoutBtn.style.display = 'none';
+                deployLink.style.display = 'none';
                 logsLink.style.display = 'none';
                 historyLink.style.display = 'none';
                 stopServerPolling();
@@ -333,164 +259,6 @@
             localStorage.removeItem('indiekku_api_key');
             apiKey = '';
             setAuthenticated(false);
-        });
-
-        // Drag and drop handlers
-        const dropZone = document.getElementById('dropZone');
-        const fileInput = document.getElementById('serverZip');
-
-        // Prevent default drag behaviors
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, preventDefaults, false);
-            document.body.addEventListener(eventName, preventDefaults, false);
-        });
-
-        function preventDefaults(e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-
-        // Highlight drop zone when dragging over it
-        ['dragenter', 'dragover'].forEach(eventName => {
-            dropZone.addEventListener(eventName, () => {
-                dropZone.classList.add('dragover');
-            }, false);
-        });
-
-        ['dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, () => {
-                dropZone.classList.remove('dragover');
-            }, false);
-        });
-
-        // Handle dropped files
-        dropZone.addEventListener('drop', (e) => {
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                fileInput.files = files;
-                handleFileSelect(files[0]);
-            }
-        }, false);
-
-        // Handle click on drop zone to trigger file input
-        dropZone.addEventListener('click', (e) => {
-            if (e.target.tagName !== 'LABEL') {
-                fileInput.click();
-            }
-        });
-
-        // File input change handler
-        fileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                handleFileSelect(file);
-            }
-        });
-
-        // Handle file selection
-        function handleFileSelect(file) {
-            if (!file.name.endsWith('.zip')) {
-                showMessage('uploadMessage', 'Please select a ZIP file', 'error');
-                fileInput.value = '';
-                return;
-            }
-            const sizeMB = (file.size / 1024 / 1024).toFixed(2);
-            document.getElementById('fileInfo').textContent =
-                'Selected: ' + file.name + ' (' + sizeMB + ' MB)';
-        }
-
-        // Upload form handler
-        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            if (!isAuthenticated) {
-                showMessage('uploadMessage', 'Please authenticate first', 'error');
-                return;
-            }
-
-            const file = fileInput.files[0];
-
-            if (!file) {
-                showMessage('uploadMessage', 'Please select a file', 'error');
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append('server_build', file);
-
-            // Add Dockerfile option
-            const dockerfileOption = document.querySelector('input[name="dockerfileOption"]:checked').value;
-            if (dockerfileOption === 'custom') {
-                const dockerfileFile = document.getElementById('dockerfileInput').files[0];
-                if (dockerfileFile) {
-                    formData.append('dockerfile', dockerfileFile);
-                }
-            } else {
-                formData.append('preset', dockerfileOption);
-            }
-
-            const uploadButton = document.getElementById('uploadButton');
-            const progressDiv = document.getElementById('uploadProgress');
-            const progressBar = document.getElementById('progressBar');
-
-            uploadButton.disabled = true;
-            uploadButton.textContent = 'Uploading...';
-            progressDiv.classList.add('show');
-
-            try {
-                const xhr = new XMLHttpRequest();
-
-                // Progress handler
-                xhr.upload.addEventListener('progress', (e) => {
-                    if (e.lengthComputable) {
-                        const percent = (e.loaded / e.total) * 100;
-                        progressBar.style.width = percent + '%';
-                    }
-                });
-
-                // Completion handler
-                xhr.addEventListener('load', () => {
-                    if (xhr.status === 200) {
-                        showMessage('uploadMessage', 'Release uploaded successfully!', 'success');
-                        fileInput.value = '';
-                        document.getElementById('fileInfo').textContent = '';
-                        document.getElementById('dockerfileInput').value = '';
-                        loadDockerfileMetadata(); // Refresh Dockerfile metadata
-                        progressBar.style.width = '100%';
-                        setTimeout(() => {
-                            progressDiv.classList.remove('show');
-                            progressBar.style.width = '0%';
-                        }, 2000);
-                    } else {
-                        const response = JSON.parse(xhr.responseText);
-                        showMessage('uploadMessage', 'Upload failed: ' + (response.error || 'Unknown error'), 'error');
-                        progressDiv.classList.remove('show');
-                        progressBar.style.width = '0%';
-                    }
-                    uploadButton.disabled = false;
-                    uploadButton.textContent = 'Upload Release';
-                });
-
-                // Error handler
-                xhr.addEventListener('error', () => {
-                    showMessage('uploadMessage', 'Upload failed: Network error', 'error');
-                    uploadButton.disabled = false;
-                    uploadButton.textContent = 'Upload Release';
-                    progressDiv.classList.remove('show');
-                    progressBar.style.width = '0%';
-                });
-
-                xhr.open('POST', '/api/v1/upload');
-                xhr.setRequestHeader('Authorization', 'Bearer ' + apiKey);
-                xhr.send(formData);
-
-            } catch (error) {
-                showMessage('uploadMessage', 'Upload failed: ' + error.message, 'error');
-                uploadButton.disabled = false;
-                uploadButton.textContent = 'Upload Release';
-                progressDiv.classList.remove('show');
-                progressBar.style.width = '0%';
-            }
         });
 
         // Show message helper

@@ -346,6 +346,7 @@ func (h *ApiHandler) SetupRouter() *gin.Engine {
 	r.GET("/", h.ServeWebUI)
 	r.GET("/history", h.ServeHistoryUI)
 	r.GET("/logs", h.ServeLogsUI)
+	r.GET("/deploy", h.ServeDeployUI)
 	r.GET("/styles.css", h.ServeStyles)
 
 	// API routes (auth required)

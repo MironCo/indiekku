@@ -18,34 +18,7 @@ import (
 // UploadRelease handles the upload of a new server build
 // Supports optional dockerfile or preset form fields to set the active Dockerfile
 func (h *ApiHandler) UploadRelease(c *gin.Context) {
-	// Check for dockerfile in the upload (optional)
-	dockerfileFile, dockerfileHeader, _ := c.Request.FormFile("dockerfile")
-	preset := c.PostForm("preset")
-
-	// Handle Dockerfile configuration if provided
-	if dockerfileFile != nil {
-		defer dockerfileFile.Close()
-		content, err := io.ReadAll(dockerfileFile)
-		if err == nil {
-			if err := docker.SetActiveDockerfile(string(content)); err == nil {
-				if h.historyManager != nil {
-					h.historyManager.RecordDockerfileChange(dockerfileHeader.Filename, "custom", "Uploaded with server build")
-				}
-				// Force image rebuild
-				docker.RemoveImage(h.imageName)
-			}
-		}
-	} else if preset != "" {
-		if err := docker.SetActiveFromPreset(preset); err == nil {
-			if h.historyManager != nil {
-				h.historyManager.RecordDockerfileChange(preset, "preset:"+preset, "Set with server build upload")
-			}
-			// Force image rebuild
-			docker.RemoveImage(h.imageName)
-		}
-	}
-
-	// Get the uploaded file
+	// Get the uploaded file first (before accessing other form fields)
 	file, err := c.FormFile("server_build")
 	if err != nil {
 		fmt.Printf("Error getting form file: %v\n", err)
@@ -60,6 +33,33 @@ func (h *ApiHandler) UploadRelease(c *gin.Context) {
 	}
 
 	fmt.Printf("Received file: %s (%d bytes)\n", file.Filename, file.Size)
+
+	// Handle Dockerfile configuration if provided (after getting server_build)
+	preset := c.PostForm("preset")
+	dockerfileHeader, _ := c.FormFile("dockerfile")
+
+	if dockerfileHeader != nil {
+		dockerfileFile, err := dockerfileHeader.Open()
+		if err == nil {
+			defer dockerfileFile.Close()
+			content, err := io.ReadAll(dockerfileFile)
+			if err == nil {
+				if err := docker.SetActiveDockerfile(string(content)); err == nil {
+					if h.historyManager != nil {
+						h.historyManager.RecordDockerfileChange(dockerfileHeader.Filename, "custom", "Uploaded with server build")
+					}
+					docker.RemoveImage(h.imageName)
+				}
+			}
+		}
+	} else if preset != "" {
+		if err := docker.SetActiveFromPreset(preset); err == nil {
+			if h.historyManager != nil {
+				h.historyManager.RecordDockerfileChange(preset, "preset:"+preset, "Set with server build upload")
+			}
+			docker.RemoveImage(h.imageName)
+		}
+	}
 
 	// Validate file extension
 	if !strings.HasSuffix(strings.ToLower(file.Filename), ".zip") {

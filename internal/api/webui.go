@@ -19,6 +19,9 @@ var logsHTML []byte
 //go:embed webui_styles.css
 var stylesCSS []byte
 
+//go:embed webui_deploy.html
+var deployHTML []byte
+
 // ServeWebUI serves the web UI HTML page
 func (h *ApiHandler) ServeWebUI(c *gin.Context) {
 	c.Data(http.StatusOK, "text/html; charset=utf-8", indexHTML)
@@ -37,4 +40,9 @@ func (h *ApiHandler) ServeLogsUI(c *gin.Context) {
 // ServeStyles serves the shared CSS stylesheet
 func (h *ApiHandler) ServeStyles(c *gin.Context) {
 	c.Data(http.StatusOK, "text/css; charset=utf-8", stylesCSS)
+}
+
+// ServeDeployUI serves the deploy/new release page
+func (h *ApiHandler) ServeDeployUI(c *gin.Context) {
+	c.Data(http.StatusOK, "text/html; charset=utf-8", deployHTML)
 }

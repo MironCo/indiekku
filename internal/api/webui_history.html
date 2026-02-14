@@ -335,7 +335,8 @@
                 });
                 if (presetsResponse.ok) {
                     const data = await presetsResponse.json();
-                    document.getElementById('availablePresets').textContent = (data.presets || []).join(', ') || '-';
+                    const presetNames = (data.presets || []).map(p => p.name || p);
+                    document.getElementById('availablePresets').textContent = presetNames.join(', ') || '-';
                 }
 
                 // Load history
