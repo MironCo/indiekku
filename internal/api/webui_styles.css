@@ -44,7 +44,7 @@ header {
 
 .header-content {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     gap: 1rem;
 }
 
@@ -68,14 +68,18 @@ h1 {
     align-items: center;
 }
 
+.nav-link,
 .logout-btn,
-.back-btn {
+.back-btn,
+button.logout-btn {
     width: auto;
     padding: 0.5rem 1.5rem;
     background: transparent;
     color: #000000;
     border: 2px solid #000000;
     font-size: 0.875rem;
+    font-family: inherit;
+    line-height: 1.6;
     text-decoration: none;
     text-align: center;
     font-weight: 600;
@@ -83,12 +87,24 @@ h1 {
     transition: all 0.2s;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
+.nav-link:hover,
 .logout-btn:hover,
-.back-btn:hover {
+.back-btn:hover,
+button.logout-btn:hover {
     background: #000000;
     color: #ffffff;
+    transform: none;
+}
+
+.nav-link.active {
+    background: rgba(0, 0, 0, 0.15);
+    pointer-events: none;
 }
 
 /* Login Page */

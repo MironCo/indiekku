@@ -5,14 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Indiekku - Server Logs</title>
     <link rel="stylesheet" href="/styles.css">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 </head>
 <body>
     <header>
         <div class="header-content">
             <h1>indiekku</h1>
-            <span class="subtitle">Server Logs</span>
+            <span class="subtitle">Logs</span>
         </div>
-        <a href="/" class="back-btn" style="display: none;" id="backLink">BACK TO DASHBOARD</a>
+        <nav class="nav-links" id="navLinks" style="display: none;">
+            <a href="/" class="nav-link">DASHBOARD</a>
+            <a href="/deploy" class="nav-link">DEPLOY</a>
+            <a href="/logs" class="nav-link active">LOGS</a>
+            <a href="/history" class="nav-link">HISTORY</a>
+            <button class="logout-btn" id="logoutBtn">LOGOUT</button>
+        </nav>
     </header>
 
     <div class="container">
@@ -116,17 +123,17 @@
             isAuthenticated = authenticated;
             const loginPage = document.getElementById('loginPage');
             const logsContainer = document.getElementById('logsContainer');
-            const backLink = document.getElementById('backLink');
+            const navLinks = document.getElementById('navLinks');
 
             if (authenticated) {
                 loginPage.classList.add('hidden');
                 logsContainer.classList.add('visible');
-                backLink.style.display = 'block';
+                navLinks.style.display = 'flex';
                 loadServers();
             } else {
                 loginPage.classList.remove('hidden');
                 logsContainer.classList.remove('visible');
-                backLink.style.display = 'none';
+                navLinks.style.display = 'none';
             }
         }
 
@@ -278,6 +285,13 @@
             if (followInterval) {
                 clearInterval(followInterval);
             }
+        });
+
+        // Logout handler
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            localStorage.removeItem('indiekku_api_key');
+            apiKey = '';
+            setAuthenticated(false);
         });
     </script>
 </body>

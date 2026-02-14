@@ -348,6 +348,7 @@ func (h *ApiHandler) SetupRouter() *gin.Engine {
 	r.GET("/logs", h.ServeLogsUI)
 	r.GET("/deploy", h.ServeDeployUI)
 	r.GET("/styles.css", h.ServeStyles)
+	r.GET("/favicon.svg", h.ServeFavicon)
 
 	// API routes (auth required)
 	api := r.Group("/api/v1")

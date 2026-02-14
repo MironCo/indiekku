@@ -5,19 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Indiekku - Server Management</title>
     <link rel="stylesheet" href="/styles.css">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 </head>
 <body>
     <header>
         <div class="header-content">
             <h1>indiekku</h1>
-            <span class="subtitle">Container Management</span>
+            <span class="subtitle">Dashboard</span>
         </div>
-        <div class="nav-links">
-            <a href="/deploy" class="logout-btn" style="display: none;" id="deployLink">DEPLOY</a>
-            <a href="/logs" class="logout-btn" style="display: none;" id="logsLink">LOGS</a>
-            <a href="/history" class="logout-btn" style="display: none;" id="historyLink">HISTORY</a>
-            <button class="logout-btn" id="logoutBtn" style="display: none;">LOGOUT</button>
-        </div>
+        <nav class="nav-links" id="navLinks" style="display: none;">
+            <a href="/" class="nav-link active">DASHBOARD</a>
+            <a href="/deploy" class="nav-link">DEPLOY</a>
+            <a href="/logs" class="nav-link">LOGS</a>
+            <a href="/history" class="nav-link">HISTORY</a>
+            <button class="logout-btn" id="logoutBtn">LOGOUT</button>
+        </nav>
     </header>
 
     <div class="container">
@@ -103,27 +105,18 @@
             isAuthenticated = authenticated;
             const loginPage = document.getElementById('loginPage');
             const dashboard = document.getElementById('dashboard');
-            const logoutBtn = document.getElementById('logoutBtn');
-            const deployLink = document.getElementById('deployLink');
-            const logsLink = document.getElementById('logsLink');
-            const historyLink = document.getElementById('historyLink');
+            const navLinks = document.getElementById('navLinks');
 
             if (authenticated) {
                 loginPage.classList.add('hidden');
                 dashboard.classList.add('visible');
-                logoutBtn.style.display = 'block';
-                deployLink.style.display = 'block';
-                logsLink.style.display = 'block';
-                historyLink.style.display = 'block';
+                navLinks.style.display = 'flex';
                 loadServers();
                 startServerPolling();
             } else {
                 loginPage.classList.remove('hidden');
                 dashboard.classList.remove('visible');
-                logoutBtn.style.display = 'none';
-                deployLink.style.display = 'none';
-                logsLink.style.display = 'none';
-                historyLink.style.display = 'none';
+                navLinks.style.display = 'none';
                 stopServerPolling();
             }
         }

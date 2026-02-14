@@ -24,6 +24,7 @@ build:
 	@cp web/logs.html internal/api/webui_logs.html
 	@cp web/deploy.html internal/api/webui_deploy.html
 	@cp web/styles.css internal/api/webui_styles.css
+	@cp web/favicon.svg internal/api/webui_favicon.svg
 	@echo "Updating embedded Dockerfile..."
 	@cp Dockerfile internal/docker/dockerfile_embed
 	mkdir -p $(BIN_DIR)
