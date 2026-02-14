@@ -12,6 +12,7 @@ import (
 	"indiekku/internal/security"
 	"indiekku/internal/server"
 	"indiekku/internal/state"
+	"indiekku/internal/validation"
 
 	"github.com/gin-gonic/gin"
 )
@@ -20,6 +21,7 @@ import (
 type ApiHandler struct {
 	stateManager   *state.StateHandler
 	historyManager *history.HistoryManager
+	sessionStore   *security.SessionStore
 	serverDir      string
 	imageName      string
 	apiKey         string
@@ -30,6 +32,7 @@ func NewAPIHandler(stateManager *state.StateHandler, historyManager *history.His
 	return &ApiHandler{
 		stateManager:   stateManager,
 		historyManager: historyManager,
+		sessionStore:   security.NewSessionStore(apiKey),
 		serverDir:      serverDir,
 		imageName:      imageName,
 		apiKey:         apiKey,
@@ -61,6 +64,24 @@ func (h *ApiHandler) StartServer(c *gin.Context) {
 	var req StartServerRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	// Validate port
+	if result := validation.ValidatePort(req.Port); !result.Valid {
+		c.JSON(http.StatusBadRequest, gin.H{"error": result.Message})
+		return
+	}
+
+	// Validate command if provided
+	if result := validation.ValidateCommand(req.Command); !result.Valid {
+		c.JSON(http.StatusBadRequest, gin.H{"error": result.Message})
+		return
+	}
+
+	// Validate args if provided
+	if result := validation.ValidateArgs(req.Args); !result.Valid {
+		c.JSON(http.StatusBadRequest, gin.H{"error": result.Message})
 		return
 	}
 
@@ -174,6 +195,12 @@ func (h *ApiHandler) StartServer(c *gin.Context) {
 func (h *ApiHandler) StopServer(c *gin.Context) {
 	containerName := c.Param("name")
 
+	// Validate container name
+	if result := validation.ValidateContainerName(containerName); !result.Valid {
+		c.JSON(http.StatusBadRequest, gin.H{"error": result.Message})
+		return
+	}
+
 	// Check if server exists in state
 	serverInfo, err := h.stateManager.GetServer(containerName)
 	if err != nil {
@@ -219,6 +246,12 @@ func (h *ApiHandler) ListServers(c *gin.Context) {
 func (h *ApiHandler) GetServer(c *gin.Context) {
 	containerName := c.Param("name")
 
+	// Validate container name
+	if result := validation.ValidateContainerName(containerName); !result.Valid {
+		c.JSON(http.StatusBadRequest, gin.H{"error": result.Message})
+		return
+	}
+
 	server, err := h.stateManager.GetServer(containerName)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
@@ -238,6 +271,18 @@ func (h *ApiHandler) Heartbeat(c *gin.Context) {
 		return
 	}
 
+	// Validate container name
+	if result := validation.ValidateContainerName(req.ContainerName); !result.Valid {
+		c.JSON(http.StatusBadRequest, gin.H{"error": result.Message})
+		return
+	}
+
+	// Validate player count
+	if result := validation.ValidatePlayerCount(req.PlayerCount); !result.Valid {
+		c.JSON(http.StatusBadRequest, gin.H{"error": result.Message})
+		return
+	}
+
 	if err := h.stateManager.UpdatePlayerCount(req.ContainerName, req.PlayerCount); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": fmt.Sprintf("Server not found: %s", req.ContainerName),
@@ -254,6 +299,14 @@ func (h *ApiHandler) Heartbeat(c *gin.Context) {
 func (h *ApiHandler) GetServerHistory(c *gin.Context) {
 	containerName := c.Query("container_name")
 	limit := 100 // default limit
+
+	// Validate container name if provided
+	if containerName != "" {
+		if result := validation.ValidateContainerName(containerName); !result.Valid {
+			c.JSON(http.StatusBadRequest, gin.H{"error": result.Message})
+			return
+		}
+	}
 
 	if h.historyManager == nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{
@@ -306,6 +359,12 @@ func (h *ApiHandler) GetServerLogs(c *gin.Context) {
 	containerName := c.Param("name")
 	if containerName == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Container name is required"})
+		return
+	}
+
+	// Validate container name
+	if result := validation.ValidateContainerName(containerName); !result.Valid {
+		c.JSON(http.StatusBadRequest, gin.H{"error": result.Message})
 		return
 	}
 

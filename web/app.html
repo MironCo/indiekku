@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Indiekku</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+</head>
+<body hx-boost="true">
+    <header>
+        <div class="header-content">
+            <h1>indiekku</h1>
+            <span class="subtitle" id="pageTitle">Dashboard</span>
+        </div>
+        <nav class="nav-links" id="navLinks" style="display: none;">
+            <a href="/" class="nav-link">DASHBOARD</a>
+            <a href="/deploy" class="nav-link">DEPLOY</a>
+            <a href="/logs" class="nav-link">LOGS</a>
+            <a href="/history" class="nav-link">HISTORY</a>
+            <button class="logout-btn" hx-post="/auth/logout" hx-swap="none">LOGOUT</button>
+        </nav>
+    </header>
+
+    <div class="container">
+        <!-- Login Page -->
+        <div class="login-page" id="loginPage">
+            <div class="login-box">
+                <h2 style="margin-bottom: 1.5rem;">Login</h2>
+                <div id="authMessage" class="message"></div>
+                <form hx-post="/auth/login" hx-target="#authMessage" hx-swap="innerHTML" id="authForm">
+                    <label for="apiKey">API Key</label>
+                    <input
+                        type="password"
+                        id="apiKey"
+                        name="api_key"
+                        placeholder="Enter your API key"
+                        required
+                    >
+                    <button type="submit">Login</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Main Content Area (SPA container) -->
+        <div id="mainContent" style="display: none;"></div>
+    </div>
+
+    <script>
+        // Check auth on page load
+        async function checkAuth() {
+            try {
+                const response = await fetch('/auth/check');
+                const data = await response.json();
+                setAuthenticated(data.authenticated);
+            } catch (error) {
+                setAuthenticated(false);
+            }
+        }
+
+        // Set authenticated state
+        function setAuthenticated(authenticated) {
+            const loginPage = document.getElementById('loginPage');
+            const mainContent = document.getElementById('mainContent');
+            const navLinks = document.getElementById('navLinks');
+
+            if (authenticated) {
+                loginPage.style.display = 'none';
+                mainContent.style.display = 'block';
+                navLinks.style.display = 'flex';
+
+                // Load the current page or default to dashboard
+                const path = window.location.pathname;
+                if (path === '/' || path === '') {
+                    loadPage('/');
+                } else {
+                    loadPage(path);
+                }
+            } else {
+                loginPage.style.display = 'block';
+                mainContent.style.display = 'none';
+                navLinks.style.display = 'none';
+            }
+        }
+
+        // Load a page via htmx
+        function loadPage(url) {
+            htmx.ajax('GET', '/pages' + url, {
+                target: '#mainContent',
+                swap: 'innerHTML'
+            });
+            updateActiveNav(url);
+        }
+
+        // Update active navigation
+        function updateActiveNav(url) {
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === url) {
+                    link.classList.add('active');
+                }
+            });
+
+            // Update page title
+            const titles = {
+                '/': 'Dashboard',
+                '/deploy': 'Deploy',
+                '/logs': 'Logs',
+                '/history': 'History'
+            };
+            document.getElementById('pageTitle').textContent = titles[url] || 'Dashboard';
+        }
+
+        // Listen for successful login
+        document.body.addEventListener('htmx:afterRequest', function(evt) {
+            if (evt.detail.pathInfo.requestPath === '/auth/login' && evt.detail.successful) {
+                const redirectUrl = evt.detail.xhr.getResponseHeader('HX-Redirect');
+                if (redirectUrl) {
+                    checkAuth();
+                }
+            } else if (evt.detail.pathInfo.requestPath === '/auth/logout' && evt.detail.successful) {
+                window.location.reload();
+            }
+        });
+
+        // Listen for htmx auth failures
+        document.body.addEventListener('htmx:responseError', function(evt) {
+            if (evt.detail.xhr.status === 401) {
+                setAuthenticated(false);
+            }
+        });
+
+        // Intercept navigation clicks for SPA behavior
+        document.body.addEventListener('htmx:configRequest', function(evt) {
+            // If it's a navigation link, change the URL to the pages endpoint
+            if (evt.detail.elt.classList.contains('nav-link')) {
+                const originalUrl = evt.detail.path;
+                evt.detail.path = '/pages' + originalUrl;
+
+                // Update browser history
+                history.pushState({}, '', originalUrl);
+                updateActiveNav(originalUrl);
+            }
+        });
+
+        // Handle browser back/forward buttons
+        window.addEventListener('popstate', function() {
+            loadPage(window.location.pathname);
+        });
+
+        // Check auth on page load
+        checkAuth();
+    </script>
+</body>
+</html>

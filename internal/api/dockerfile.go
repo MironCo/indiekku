@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"indiekku/internal/docker"
+	"indiekku/internal/validation"
 
 	"github.com/gin-gonic/gin"
 )
@@ -75,6 +76,12 @@ func (h *ApiHandler) SetActiveDockerfile(c *gin.Context) {
 			return
 		}
 
+		// Validate dockerfile content
+		if result := validation.ValidateDockerfile(string(content)); !result.Valid {
+			c.JSON(http.StatusBadRequest, gin.H{"error": result.Message})
+			return
+		}
+
 		if err := docker.SetActiveDockerfile(string(content)); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": fmt.Sprintf("Failed to set active Dockerfile: %v", err),
@@ -110,6 +117,12 @@ func (h *ApiHandler) SetActiveDockerfile(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Preset name is required",
 		})
+		return
+	}
+
+	// Validate preset name
+	if result := validation.ValidatePresetName(req.Preset); !result.Valid {
+		c.JSON(http.StatusBadRequest, gin.H{"error": result.Message})
 		return
 	}
 
