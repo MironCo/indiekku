@@ -19,6 +19,7 @@ const (
 type Client struct {
 	baseURL    string
 	apiKey     string
+	csrfToken  string
 	httpClient *http.Client
 }
 
@@ -42,6 +43,46 @@ func NewClient(baseURL string) (*Client, error) {
 // addAuthHeader adds the Bearer token to the request
 func (c *Client) addAuthHeader(req *http.Request) {
 	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+}
+
+// fetchCSRFToken fetches a CSRF token from the server for state-changing requests
+func (c *Client) fetchCSRFToken() error {
+	req, err := http.NewRequest("GET", c.baseURL+"/api/v1/csrf-token", nil)
+	if err != nil {
+		return err
+	}
+	c.addAuthHeader(req)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to fetch CSRF token: status %d", resp.StatusCode)
+	}
+
+	var result struct {
+		CSRFToken string `json:"csrf_token"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return err
+	}
+
+	c.csrfToken = result.CSRFToken
+	return nil
+}
+
+// addCSRFHeader adds the CSRF token header (fetches token if needed)
+func (c *Client) addCSRFHeader(req *http.Request) error {
+	if c.csrfToken == "" {
+		if err := c.fetchCSRFToken(); err != nil {
+			return err
+		}
+	}
+	req.Header.Set("X-CSRF-Token", c.csrfToken)
+	return nil
 }
 
 // HealthCheck checks if the API server is running
@@ -90,6 +131,9 @@ func (c *Client) StartServer(port string) (*StartServerResponse, error) {
 
 	req.Header.Set("Content-Type", "application/json")
 	c.addAuthHeader(req)
+	if err := c.addCSRFHeader(req); err != nil {
+		return nil, fmt.Errorf("failed to get CSRF token: %w", err)
+	}
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -122,6 +166,9 @@ func (c *Client) StopServer(containerName string) error {
 	}
 
 	c.addAuthHeader(req)
+	if err := c.addCSRFHeader(req); err != nil {
+		return fmt.Errorf("failed to get CSRF token: %w", err)
+	}
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -139,7 +186,6 @@ func (c *Client) StopServer(containerName string) error {
 
 // ServerInfo represents information about a running server
 type ServerInfo struct {
-	ContainerID   string    `json:"container_id"`
 	ContainerName string    `json:"container_name"`
 	Port          string    `json:"port"`
 	PlayerCount   int       `json:"player_count"`

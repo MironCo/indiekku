@@ -6,11 +6,12 @@ import (
 	"time"
 )
 
-// ServerInfo represents a running game server container
+// ServerInfo represents a running container
 type ServerInfo struct {
-	ContainerID   string    `json:"container_id"`
 	ContainerName string    `json:"container_name"`
 	Port          string    `json:"port"`
+	Command       string    `json:"command,omitempty"`
+	Args          []string  `json:"args,omitempty"`
 	PlayerCount   int       `json:"player_count"`
 	StartedAt     time.Time `json:"started_at"`
 }

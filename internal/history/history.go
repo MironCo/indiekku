@@ -38,6 +38,15 @@ type UploadHistory struct {
 	Notes     string    `json:"notes,omitempty"`
 }
 
+// DockerfileHistory represents a Dockerfile change event
+type DockerfileHistory struct {
+	ID        int       `json:"id"`
+	Name      string    `json:"name"`
+	Source    string    `json:"source"` // "preset:unity", "preset:generic", "custom"
+	Timestamp time.Time `json:"timestamp"`
+	Notes     string    `json:"notes,omitempty"`
+}
+
 // NewHistoryManager creates a new history manager and initializes the database
 func NewHistoryManager(dbPath string) (*HistoryManager, error) {
 	db, err := sql.Open("sqlite3", dbPath)
@@ -95,6 +104,22 @@ func (h *HistoryManager) initTables() error {
 
 	if _, err := h.db.Exec(uploadHistoryTable); err != nil {
 		return fmt.Errorf("failed to create upload_history table: %w", err)
+	}
+
+	// Create dockerfile_history table
+	dockerfileHistoryTable := `
+	CREATE TABLE IF NOT EXISTS dockerfile_history (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT NOT NULL,
+		source TEXT NOT NULL,
+		timestamp DATETIME NOT NULL,
+		notes TEXT
+	);
+	CREATE INDEX IF NOT EXISTS idx_dockerfile_history_timestamp ON dockerfile_history(timestamp DESC);
+	`
+
+	if _, err := h.db.Exec(dockerfileHistoryTable); err != nil {
+		return fmt.Errorf("failed to create dockerfile_history table: %w", err)
 	}
 
 	return nil
@@ -189,6 +214,41 @@ func (h *HistoryManager) GetUploadHistory(limit int) ([]UploadHistory, error) {
 	}
 
 	return uploads, nil
+}
+
+// RecordDockerfileChange records a Dockerfile change event
+func (h *HistoryManager) RecordDockerfileChange(name, source, notes string) error {
+	query := `INSERT INTO dockerfile_history (name, source, timestamp, notes) VALUES (?, ?, ?, ?)`
+	_, err := h.db.Exec(query, name, source, time.Now(), notes)
+	if err != nil {
+		return fmt.Errorf("failed to record Dockerfile change: %w", err)
+	}
+	return nil
+}
+
+// GetDockerfileHistory retrieves Dockerfile change history
+func (h *HistoryManager) GetDockerfileHistory(limit int) ([]DockerfileHistory, error) {
+	query := `SELECT id, name, source, timestamp, notes FROM dockerfile_history ORDER BY timestamp DESC LIMIT ?`
+	rows, err := h.db.Query(query, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query Dockerfile history: %w", err)
+	}
+	defer rows.Close()
+
+	var history []DockerfileHistory
+	for rows.Next() {
+		var entry DockerfileHistory
+		var notes sql.NullString
+		if err := rows.Scan(&entry.ID, &entry.Name, &entry.Source, &entry.Timestamp, &notes); err != nil {
+			return nil, fmt.Errorf("failed to scan Dockerfile history: %w", err)
+		}
+		if notes.Valid {
+			entry.Notes = notes.String
+		}
+		history = append(history, entry)
+	}
+
+	return history, nil
 }
 
 // Close closes the database connection

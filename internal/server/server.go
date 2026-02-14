@@ -12,13 +12,25 @@ const (
 )
 
 // FindBinary scans the server directory for game server executables
-// It looks for common patterns like .x86_64 (Linux) and .exe (Windows)
+// It looks for executable files, skipping known non-executable types
 // It recursively searches subdirectories, skipping __MACOSX folders
 func FindBinary(serverDir string) (string, error) {
-	// Look for common game server binary patterns
-	patterns := []string{".x86_64", ".exe"}
+	var candidates []string
 
-	var foundPath string
+	// Known non-executable extensions to skip
+	skipExtensions := map[string]bool{
+		".txt": true, ".md": true, ".json": true, ".yaml": true, ".yml": true,
+		".xml": true, ".cfg": true, ".ini": true, ".log": true, ".env": true,
+		".png": true, ".jpg": true, ".jpeg": true, ".gif": true, ".bmp": true,
+		".wav": true, ".mp3": true, ".ogg": true, ".zip": true, ".tar": true,
+		".gz": true, ".dll": true, ".so": true, ".dylib": true, ".pdb": true,
+	}
+
+	// Known non-executable files to skip
+	skipFiles := map[string]bool{
+		".gitkeep": true, ".gitignore": true, ".DS_Store": true,
+		"README": true, "LICENSE": true, "Makefile": true,
+	}
 
 	// Walk through the directory tree
 	err := filepath.Walk(serverDir, func(path string, info os.FileInfo, err error) error {
@@ -36,31 +48,54 @@ func FindBinary(serverDir string) (string, error) {
 			return nil
 		}
 
-		// Check if file matches any pattern
 		name := info.Name()
-		for _, pattern := range patterns {
-			if strings.HasSuffix(name, pattern) {
-				// Get relative path from serverDir
-				relPath, err := filepath.Rel(serverDir, path)
-				if err != nil {
-					return err
-				}
-				// Return the path as it will be in the Docker container
-				foundPath = filepath.Join("/app", relPath)
-				return filepath.SkipAll // Stop searching once found
+
+		// Skip hidden files (except we want to check them for executability)
+		if strings.HasPrefix(name, ".") {
+			return nil
+		}
+
+		// Skip known non-executable files
+		if skipFiles[name] {
+			return nil
+		}
+
+		// Skip known non-executable extensions
+		ext := strings.ToLower(filepath.Ext(name))
+		if skipExtensions[ext] {
+			return nil
+		}
+
+		// Check if file looks like an executable:
+		// 1. Has execute permission bit set
+		// 2. Has known executable extension (.x86_64, .exe)
+		// 3. Contains "linux" or "server" in name (common patterns)
+		isExec := info.Mode()&0111 != 0
+		hasExecExt := strings.HasSuffix(name, ".x86_64") || strings.HasSuffix(name, ".exe")
+		looksLikeBinary := strings.Contains(strings.ToLower(name), "linux") ||
+			strings.Contains(strings.ToLower(name), "server") ||
+			strings.Contains(strings.ToLower(name), "arm64") ||
+			strings.Contains(strings.ToLower(name), "amd64")
+
+		if isExec || hasExecExt || looksLikeBinary {
+			relPath, err := filepath.Rel(serverDir, path)
+			if err != nil {
+				return err
 			}
+			candidates = append(candidates, filepath.Join("/app", relPath))
 		}
 
 		return nil
 	})
 
-	if err != nil && err != filepath.SkipAll {
+	if err != nil {
 		return "", fmt.Errorf("could not scan server directory: %w", err)
 	}
 
-	if foundPath == "" {
-		return "", fmt.Errorf("no game server binary found in %s: (looking for *.x86_64 or *.exe)", serverDir)
+	if len(candidates) == 0 {
+		return "", fmt.Errorf("no executable found in %s", serverDir)
 	}
 
-	return foundPath, nil
+	// Return the first candidate (could be smarter about prioritization)
+	return candidates[0], nil
 }

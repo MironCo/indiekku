@@ -22,6 +22,9 @@ build:
 	@cp web/index.html internal/api/webui_index.html
 	@cp web/history.html internal/api/webui_history.html
 	@cp web/logs.html internal/api/webui_logs.html
+	@cp web/deploy.html internal/api/webui_deploy.html
+	@cp web/styles.css internal/api/webui_styles.css
+	@cp web/favicon.svg internal/api/webui_favicon.svg
 	@echo "Updating embedded Dockerfile..."
 	@cp Dockerfile internal/docker/dockerfile_embed
 	mkdir -p $(BIN_DIR)
@@ -30,6 +33,12 @@ build:
 clean:
 	$(GOCLEAN)
 	rm -rf $(BIN_DIR)
+	rm -rf dockerfiles/
+	rm -rf game_server/*
+	@# Restore .gitkeep
+	@touch game_server/.gitkeep
+	rm -f indiekku.db
+	@echo "Cleaned: bin/, dockerfiles/, game_server/*, indiekku.db"
 
 test:
 	$(GOTEST) -v ./...
@@ -52,7 +61,4 @@ build-test: build
 	@sleep 1
 	@echo "Starting server..."
 	./$(BIN_DIR)/$(BINARY_NAME) serve
-	@sleep 2
-	@echo "Starting game server..."
-	./$(BIN_DIR)/$(BINARY_NAME) start
-	@echo "Done! Check status with: ./bin/indiekku ps"
+	@echo "Done! Server running. Use web UI or CLI to start game servers."

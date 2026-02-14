@@ -9,7 +9,6 @@ func TestStateHandler_AddAndGetServer(t *testing.T) {
 	handler := NewStateHandler()
 
 	server := &ServerInfo{
-		ContainerID:   "abc123",
 		ContainerName: "unity-server-7777",
 		Port:          "7777",
 		PlayerCount:   0,

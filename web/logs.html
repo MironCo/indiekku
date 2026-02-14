@@ -4,341 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Indiekku - Server Logs</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: #fafafa;
-            color: #000000;
-            line-height: 1.6;
-            min-height: 100vh;
-            padding-top: 80px;
-        }
-
-        .container {
-            max-width: 100%;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        @media (min-width: 1400px) {
-            .container {
-                padding: 2rem 4rem;
-            }
-        }
-
-        header {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            background: #fafafa;
-            border-bottom: 2px solid #000000;
-            padding: 1rem 2rem;
-            z-index: 1000;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .header-content {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        h1 {
-            color: #000000;
-            font-size: 1.25rem;
-            font-weight: 700;
-            margin: 0;
-        }
-
-        .subtitle {
-            color: rgba(0, 0, 0, 0.6);
-            font-size: 0.875rem;
-            margin: 0;
-        }
-
-        .back-btn {
-            width: auto;
-            padding: 0.5rem 1.5rem;
-            background: transparent;
-            color: #000000;
-            border: 2px solid #000000;
-            font-size: 0.875rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            text-decoration: none;
-            display: inline-block;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .back-btn:hover {
-            background: #000000;
-            color: #ffffff;
-        }
-
-        .login-page {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            min-height: 60vh;
-        }
-
-        .login-page.hidden {
-            display: none;
-        }
-
-        .login-box {
-            background: transparent;
-            padding: 3rem;
-            border: 2px solid #000000;
-            max-width: 500px;
-            margin: 0 auto;
-            width: 100%;
-        }
-
-        .logs-container {
-            display: none;
-        }
-
-        .logs-container.visible {
-            display: block;
-        }
-
-        .logs-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid #000000;
-        }
-
-        h2 {
-            color: #000000;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: rgba(0, 0, 0, 0.6);
-            font-weight: 500;
-            text-transform: uppercase;
-            font-size: 0.75rem;
-            letter-spacing: 0.05em;
-        }
-
-        input[type="password"] {
-            width: 100%;
-            padding: 0.875rem;
-            background: #ffffff;
-            border: 2px solid #000000;
-            border-radius: 0;
-            color: #000000;
-            font-size: 1rem;
-            margin-bottom: 1rem;
-            transition: all 0.2s;
-        }
-
-        input[type="password"]:focus {
-            outline: none;
-            border-color: #000000;
-            background: #ffffff;
-        }
-
-        button {
-            width: 100%;
-            padding: 1rem;
-            background: #000000;
-            color: #ffffff;
-            border: none;
-            border-radius: 0;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        button:hover {
-            background: rgba(0, 0, 0, 0.85);
-            transform: translateY(-1px);
-        }
-
-        button:active {
-            transform: translateY(0);
-        }
-
-        button:disabled {
-            background: rgba(0, 0, 0, 0.2);
-            color: rgba(0, 0, 0, 0.3);
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .message {
-            padding: 1rem;
-            border-radius: 0;
-            margin-bottom: 1rem;
-            display: none;
-            border: 2px solid #000000;
-            background: #ffffff;
-        }
-
-        .message.show {
-            display: block;
-        }
-
-        .message.error {
-            background: #ffffff;
-            border-color: #000000;
-            color: #000000;
-        }
-
-        .controls {
-            background: transparent;
-            padding: 1.5rem;
-            border: 2px solid #000000;
-            margin-bottom: 2rem;
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-            align-items: flex-end;
-        }
-
-        .control-group {
-            flex: 1;
-            min-width: 200px;
-        }
-
-        select {
-            width: 100%;
-            padding: 0.875rem;
-            background: #ffffff;
-            border: 2px solid #000000;
-            border-radius: 0;
-            color: #000000;
-            font-size: 1rem;
-            transition: all 0.2s;
-            cursor: pointer;
-        }
-
-        select:focus {
-            outline: none;
-            border-color: #000000;
-            background: #ffffff;
-        }
-
-        .control-buttons {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .control-btn {
-            padding: 0.875rem 1.5rem;
-            background: #ffffff;
-            border: 2px solid #000000;
-            color: #000000;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-weight: 600;
-            font-size: 0.875rem;
-            width: auto;
-        }
-
-        .control-btn:hover {
-            background: #000000;
-            color: #ffffff;
-        }
-
-        .control-btn.active {
-            background: #000000;
-            color: #ffffff;
-        }
-
-        .logs-section {
-            background: transparent;
-            padding: 2rem;
-            border: 2px solid #000000;
-            height: calc(100vh - 350px);
-            display: flex;
-            flex-direction: column;
-        }
-
-        .logs-viewer {
-            background: #000000;
-            color: #ffffff;
-            font-family: 'Courier New', monospace;
-            font-size: 0.875rem;
-            padding: 1.5rem;
-            overflow-y: auto;
-            flex: 1;
-            white-space: pre-wrap;
-            word-break: break-all;
-        }
-
-        .logs-viewer::-webkit-scrollbar {
-            width: 12px;
-        }
-
-        .logs-viewer::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .logs-viewer::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 0;
-        }
-
-        .logs-viewer::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.5);
-        }
-
-        .no-logs {
-            text-align: center;
-            padding: 2rem;
-            color: rgba(255, 255, 255, 0.5);
-            font-style: italic;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 2rem;
-            color: rgba(255, 255, 255, 0.7);
-        }
-
-        .log-info {
-            margin-bottom: 0.75rem;
-            padding: 0.5rem 0.75rem;
-            background: rgba(0, 0, 0, 0.05);
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            font-size: 0.75rem;
-        }
-
-        .log-info strong {
-            font-weight: 600;
-        }
-    </style>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 </head>
 <body>
     <header>
         <div class="header-content">
             <h1>indiekku</h1>
-            <span class="subtitle">Server Logs</span>
+            <span class="subtitle">Logs</span>
         </div>
-        <a href="/" class="back-btn" style="display: none;" id="backLink">BACK TO DASHBOARD</a>
+        <nav class="nav-links" id="navLinks" style="display: none;">
+            <a href="/" class="nav-link">DASHBOARD</a>
+            <a href="/deploy" class="nav-link">DEPLOY</a>
+            <a href="/logs" class="nav-link active">LOGS</a>
+            <a href="/history" class="nav-link">HISTORY</a>
+            <button class="logout-btn" id="logoutBtn">LOGOUT</button>
+        </nav>
     </header>
 
     <div class="container">
@@ -442,17 +123,17 @@
             isAuthenticated = authenticated;
             const loginPage = document.getElementById('loginPage');
             const logsContainer = document.getElementById('logsContainer');
-            const backLink = document.getElementById('backLink');
+            const navLinks = document.getElementById('navLinks');
 
             if (authenticated) {
                 loginPage.classList.add('hidden');
                 logsContainer.classList.add('visible');
-                backLink.style.display = 'block';
+                navLinks.style.display = 'flex';
                 loadServers();
             } else {
                 loginPage.classList.remove('hidden');
                 logsContainer.classList.remove('visible');
-                backLink.style.display = 'none';
+                navLinks.style.display = 'none';
             }
         }
 
@@ -556,8 +237,8 @@
 
             if (isFollowing) {
                 followBtn.classList.add('active');
-                loadLogs(); // Load immediately
-                followInterval = setInterval(loadLogs, 2000); // Update every 2 seconds
+                loadLogs();
+                followInterval = setInterval(loadLogs, 2000);
             } else {
                 followBtn.classList.remove('active');
                 if (followInterval) {
@@ -604,6 +285,13 @@
             if (followInterval) {
                 clearInterval(followInterval);
             }
+        });
+
+        // Logout handler
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            localStorage.removeItem('indiekku_api_key');
+            apiKey = '';
+            setAuthenticated(false);
         });
     </script>
 </body>

@@ -23,8 +23,8 @@ var (
 
 const (
 	defaultPort    = "7777"
-	defaultAPIPort = "8080"
-	defaultAPIURL  = "http://localhost:8080"
+	defaultAPIPort = "3000"
+	defaultAPIURL  = "http://localhost:3000"
 	pidFile        = "indiekku.pid"
 )
 
@@ -49,6 +49,8 @@ func main() {
 		runStop()
 	case "ps":
 		runPs()
+	case "dockerfiles":
+		runDockerfiles()
 	case "version":
 		runVersion()
 	default:
@@ -59,20 +61,55 @@ func main() {
 }
 
 func printUsage() {
-	fmt.Println("indiekku - Game server orchestration tool")
+	fmt.Println("indiekku - Container orchestration tool")
 	fmt.Println("\nUsage:")
 	fmt.Println("  indiekku serve             Start the API server (runs in background)")
 	fmt.Println("  indiekku shutdown          Stop the API server")
 	fmt.Println("  indiekku logs              View API server logs")
-	fmt.Println("  indiekku logs <server>     View logs for a specific game server")
-	fmt.Println("  indiekku start [port]      Start a game server container")
-	fmt.Println("  indiekku stop <name>       Stop a game server container")
-	fmt.Println("  indiekku ps                List running game server containers")
+	fmt.Println("  indiekku logs <server>     View logs for a specific container")
+	fmt.Println("  indiekku start [port]      Start a container")
+	fmt.Println("  indiekku stop <name>       Stop a container")
+	fmt.Println("  indiekku ps                List running containers")
+	fmt.Println("  indiekku dockerfiles       List available Dockerfile presets and active config")
 	fmt.Println("  indiekku version           Show version information")
 }
 
 func runVersion() {
 	fmt.Printf("indiekku %s\n", version)
+}
+
+func runDockerfiles() {
+	fmt.Println("Dockerfile Configuration")
+	fmt.Println("========================")
+	fmt.Println()
+
+	// Show available presets
+	fmt.Println("Available Presets:")
+	for _, name := range docker.ListPresets() {
+		fmt.Printf("  - %s\n", name)
+	}
+	fmt.Println()
+
+	// Show current active Dockerfile
+	activeName := docker.GetActiveDockerfileName()
+	fmt.Printf("Active Dockerfile: %s\n", activeName)
+	fmt.Println()
+
+	// Show preview of active Dockerfile
+	content, err := docker.GetActiveDockerfile()
+	if err == nil {
+		lines := strings.Split(content, "\n")
+		fmt.Println("Preview (first 10 lines):")
+		for i, line := range lines {
+			if i >= 10 {
+				fmt.Println("  ...")
+				break
+			}
+			fmt.Printf("  %s\n", line)
+		}
+	}
+	fmt.Println()
+	fmt.Println("Use the web UI or API to change the active Dockerfile.")
 }
 
 func runServe() {
@@ -100,7 +137,7 @@ func runServe() {
 		fmt.Printf("  Keep this key secure - you'll need it to authenticate API requests.\n\n")
 		fmt.Printf("  Example usage:\n")
 		fmt.Printf("    curl -H \"Authorization: Bearer %s\" \\\n", apiKey)
-		fmt.Printf("         http://localhost:8080/api/v1/servers\n\n")
+		fmt.Printf("         http://localhost:3000/api/v1/servers\n\n")
 		fmt.Println(strings.Repeat("=", 70))
 		fmt.Println()
 	}
@@ -228,7 +265,7 @@ func runShutdown() {
 	if err == nil {
 		fmt.Println("Stopping all running game servers...")
 		resp, err := apiClient.ListServers()
-		if err == nil && resp.Count > 0 {
+		if err == nil && resp != nil && resp.Count > 0 {
 			for _, server := range resp.Servers {
 				fmt.Printf("  Stopping %s...\n", server.ContainerName)
 				if err := apiClient.StopServer(server.ContainerName); err != nil {
@@ -237,8 +274,10 @@ func runShutdown() {
 					fmt.Printf("    ✓ Stopped %s\n", server.ContainerName)
 				}
 			}
-		} else if resp.Count == 0 {
+		} else if err == nil && resp != nil && resp.Count == 0 {
 			fmt.Println("  No running servers to stop")
+		} else if err != nil {
+			fmt.Printf("  Warning: Could not list servers: %v\n", err)
 		}
 	}
 
@@ -257,8 +296,10 @@ func runShutdown() {
 	}
 
 	if err := process.Kill(); err != nil {
-		fmt.Printf("Error: Failed to kill process: %v\n", err)
-		os.Exit(1)
+		// Process already dead - clean up the stale PID file
+		os.Remove(pidFile)
+		fmt.Printf("Process already stopped. Cleaned up stale PID file.\n")
+		return
 	}
 
 	// Remove PID file

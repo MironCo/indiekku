@@ -7,17 +7,20 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"indiekku/internal/docker"
 	"indiekku/internal/server"
+	"indiekku/internal/validation"
 
 	"github.com/gin-gonic/gin"
 )
 
 // UploadRelease handles the upload of a new server build
+// Supports optional dockerfile or preset form fields to set the active Dockerfile
 func (h *ApiHandler) UploadRelease(c *gin.Context) {
-	// Get the uploaded file
+	// Get the uploaded file first (before accessing other form fields)
 	file, err := c.FormFile("server_build")
 	if err != nil {
 		fmt.Printf("Error getting form file: %v\n", err)
@@ -32,6 +35,60 @@ func (h *ApiHandler) UploadRelease(c *gin.Context) {
 	}
 
 	fmt.Printf("Received file: %s (%d bytes)\n", file.Filename, file.Size)
+
+	// Validate file size
+	if result := validation.ValidateFileSize(file.Size); !result.Valid {
+		if h.historyManager != nil {
+			h.historyManager.RecordUpload(file.Filename, file.Size, false, result.Message)
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": result.Message})
+		return
+	}
+
+	// Handle Dockerfile configuration if provided (after getting server_build)
+	preset := c.PostForm("preset")
+	dockerfileHeader, _ := c.FormFile("dockerfile")
+	defaultPortStr := c.PostForm("default_port")
+
+	// Save default port if provided
+	if defaultPortStr != "" {
+		if port, err := strconv.Atoi(defaultPortStr); err == nil && port > 0 && port < 65536 {
+			docker.SetDefaultPort(port)
+		}
+	}
+
+	if dockerfileHeader != nil {
+		dockerfileFile, err := dockerfileHeader.Open()
+		if err == nil {
+			defer dockerfileFile.Close()
+			content, err := io.ReadAll(dockerfileFile)
+			if err == nil {
+				// Validate dockerfile content
+				if result := validation.ValidateDockerfile(string(content)); !result.Valid {
+					c.JSON(http.StatusBadRequest, gin.H{"error": result.Message})
+					return
+				}
+				if err := docker.SetActiveDockerfile(string(content)); err == nil {
+					if h.historyManager != nil {
+						h.historyManager.RecordDockerfileChange(dockerfileHeader.Filename, "custom", "Uploaded with server build")
+					}
+					docker.RemoveImage(h.imageName)
+				}
+			}
+		}
+	} else if preset != "" {
+		// Validate preset name
+		if result := validation.ValidatePresetName(preset); !result.Valid {
+			c.JSON(http.StatusBadRequest, gin.H{"error": result.Message})
+			return
+		}
+		if err := docker.SetActiveFromPreset(preset); err == nil {
+			if h.historyManager != nil {
+				h.historyManager.RecordDockerfileChange(preset, "preset:"+preset, "Set with server build upload")
+			}
+			docker.RemoveImage(h.imageName)
+		}
+	}
 
 	// Validate file extension
 	if !strings.HasSuffix(strings.ToLower(file.Filename), ".zip") {
@@ -150,6 +207,14 @@ func extractZipToServerDir(zipPath, destDir string) error {
 		return fmt.Errorf("failed to open zip file: %w", err)
 	}
 	defer r.Close()
+
+	// Validate ZIP contents before extraction (ZIP bomb protection)
+	validator := validation.NewZipFileValidator()
+	for _, f := range r.File {
+		if result := validator.ValidateFileEntry(f.UncompressedSize64, f.CompressedSize64); !result.Valid {
+			return fmt.Errorf("zip validation failed: %s", result.Message)
+		}
+	}
 
 	// Create destination directory if it doesn't exist
 	if err := os.MkdirAll(destDir, 0755); err != nil {

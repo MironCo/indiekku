@@ -12,6 +12,7 @@ import (
 	"indiekku/internal/security"
 	"indiekku/internal/server"
 	"indiekku/internal/state"
+	"indiekku/internal/validation"
 
 	"github.com/gin-gonic/gin"
 )
@@ -20,6 +21,8 @@ import (
 type ApiHandler struct {
 	stateManager   *state.StateHandler
 	historyManager *history.HistoryManager
+	sessionStore   *security.SessionStore
+	csrfManager    *security.CSRFManager
 	serverDir      string
 	imageName      string
 	apiKey         string
@@ -30,15 +33,29 @@ func NewAPIHandler(stateManager *state.StateHandler, historyManager *history.His
 	return &ApiHandler{
 		stateManager:   stateManager,
 		historyManager: historyManager,
+		sessionStore:   security.NewSessionStore(apiKey),
+		csrfManager:    security.NewCSRFManager(),
 		serverDir:      serverDir,
 		imageName:      imageName,
 		apiKey:         apiKey,
 	}
 }
 
+// GetCSRFToken generates and returns a new CSRF token
+func (h *ApiHandler) GetCSRFToken(c *gin.Context) {
+	token, err := h.csrfManager.GenerateToken()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate CSRF token"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"csrf_token": token})
+}
+
 // StartServerRequest represents the request body for starting a server
 type StartServerRequest struct {
-	Port string `json:"port,omitempty"`
+	Port    string   `json:"port,omitempty"`
+	Command string   `json:"command,omitempty"` // Custom command to run (overrides auto-detected binary)
+	Args    []string `json:"args,omitempty"`    // Custom args (overrides default -port behavior)
 }
 
 // StartServerResponse represents the response for starting a server
@@ -62,24 +79,51 @@ func (h *ApiHandler) StartServer(c *gin.Context) {
 		return
 	}
 
-	// Find server binary
-	serverBinary, err := server.FindBinary(h.serverDir)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": fmt.Sprintf("Failed to find server binary: %v", err),
-		})
+	// Validate port
+	if result := validation.ValidatePort(req.Port); !result.Valid {
+		c.JSON(http.StatusBadRequest, gin.H{"error": result.Message})
+		return
+	}
+
+	// Validate command if provided
+	if result := validation.ValidateCommand(req.Command); !result.Valid {
+		c.JSON(http.StatusBadRequest, gin.H{"error": result.Message})
+		return
+	}
+
+	// Validate args if provided
+	if result := validation.ValidateArgs(req.Args); !result.Valid {
+		c.JSON(http.StatusBadRequest, gin.H{"error": result.Message})
 		return
 	}
 
 	// Determine port
 	port := req.Port
 	if port == "" {
-		port = h.stateManager.GetNextAvailablePort(7777)
+		port = h.stateManager.GetNextAvailablePort(docker.GetDefaultPort())
 	} else if h.stateManager.IsPortInUse(port) {
 		c.JSON(http.StatusConflict, gin.H{
 			"error": fmt.Sprintf("Port %s is already in use", port),
 		})
 		return
+	}
+
+	// Determine command and args
+	command := req.Command
+	args := req.Args
+
+	// If no custom command provided, try to find server binary (legacy behavior)
+	if command == "" {
+		serverBinary, err := server.FindBinary(h.serverDir)
+		if err != nil {
+			// No binary found and no command specified - that's okay if Dockerfile has CMD
+			fmt.Printf("No server binary found, using Dockerfile CMD: %v\n", err)
+		} else {
+			command = serverBinary
+			if len(args) == 0 {
+				args = []string{"-port", port}
+			}
+		}
 	}
 
 	// Generate a unique container name with video game theme
@@ -120,8 +164,19 @@ func (h *ApiHandler) StartServer(c *gin.Context) {
 		}
 	}
 
-	// Run the container
-	if err := docker.RunContainer(containerName, h.imageName, port, serverBinary); err != nil {
+	// Run the container with config
+	// ContainerPort is the internal port the app listens on (from config)
+	// Port is the external port we expose
+	containerPort := fmt.Sprintf("%d", docker.GetDefaultPort())
+	cfg := docker.ContainerConfig{
+		Name:          containerName,
+		ImageName:     h.imageName,
+		Port:          port,
+		ContainerPort: containerPort,
+		Command:       command,
+		Args:          args,
+	}
+	if err := docker.RunContainer(cfg); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": fmt.Sprintf("Failed to start container: %v", err),
 		})
@@ -132,6 +187,8 @@ func (h *ApiHandler) StartServer(c *gin.Context) {
 	h.stateManager.AddServer(&state.ServerInfo{
 		ContainerName: containerName,
 		Port:          port,
+		Command:       command,
+		Args:          args,
 		PlayerCount:   0,
 		StartedAt:     time.Now(),
 	})
@@ -146,13 +203,19 @@ func (h *ApiHandler) StartServer(c *gin.Context) {
 	c.JSON(http.StatusCreated, StartServerResponse{
 		ContainerName: containerName,
 		Port:          port,
-		Message:       "Game server started successfully",
+		Message:       "Container started successfully",
 	})
 }
 
 // StopServer handles DELETE /servers/:name
 func (h *ApiHandler) StopServer(c *gin.Context) {
 	containerName := c.Param("name")
+
+	// Validate container name
+	if result := validation.ValidateContainerName(containerName); !result.Valid {
+		c.JSON(http.StatusBadRequest, gin.H{"error": result.Message})
+		return
+	}
 
 	// Check if server exists in state
 	serverInfo, err := h.stateManager.GetServer(containerName)
@@ -195,11 +258,44 @@ func (h *ApiHandler) ListServers(c *gin.Context) {
 	})
 }
 
+// GetServer handles GET /servers/:name
+func (h *ApiHandler) GetServer(c *gin.Context) {
+	containerName := c.Param("name")
+
+	// Validate container name
+	if result := validation.ValidateContainerName(containerName); !result.Valid {
+		c.JSON(http.StatusBadRequest, gin.H{"error": result.Message})
+		return
+	}
+
+	server, err := h.stateManager.GetServer(containerName)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": fmt.Sprintf("Server not found: %s", containerName),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, server)
+}
+
 // Heartbeat handles POST /heartbeat
 func (h *ApiHandler) Heartbeat(c *gin.Context) {
 	var req HeartbeatRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	// Validate container name
+	if result := validation.ValidateContainerName(req.ContainerName); !result.Valid {
+		c.JSON(http.StatusBadRequest, gin.H{"error": result.Message})
+		return
+	}
+
+	// Validate player count
+	if result := validation.ValidatePlayerCount(req.PlayerCount); !result.Valid {
+		c.JSON(http.StatusBadRequest, gin.H{"error": result.Message})
 		return
 	}
 
@@ -219,6 +315,14 @@ func (h *ApiHandler) Heartbeat(c *gin.Context) {
 func (h *ApiHandler) GetServerHistory(c *gin.Context) {
 	containerName := c.Query("container_name")
 	limit := 100 // default limit
+
+	// Validate container name if provided
+	if containerName != "" {
+		if result := validation.ValidateContainerName(containerName); !result.Valid {
+			c.JSON(http.StatusBadRequest, gin.H{"error": result.Message})
+			return
+		}
+	}
 
 	if h.historyManager == nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{
@@ -274,6 +378,12 @@ func (h *ApiHandler) GetServerLogs(c *gin.Context) {
 		return
 	}
 
+	// Validate container name
+	if result := validation.ValidateContainerName(containerName); !result.Valid {
+		c.JSON(http.StatusBadRequest, gin.H{"error": result.Message})
+		return
+	}
+
 	// Get logs from Docker (last 100 lines)
 	logs, err := docker.GetContainerLogsSince(containerName, "5m")
 	if err != nil {
@@ -311,19 +421,37 @@ func (h *ApiHandler) SetupRouter() *gin.Engine {
 	r.GET("/", h.ServeWebUI)
 	r.GET("/history", h.ServeHistoryUI)
 	r.GET("/logs", h.ServeLogsUI)
+	r.GET("/deploy", h.ServeDeployUI)
+	r.GET("/styles.css", h.ServeStyles)
+	r.GET("/favicon.svg", h.ServeFavicon)
 
 	// API routes (auth required)
 	api := r.Group("/api/v1")
 	api.Use(security.AuthMiddleware(h.apiKey))
 	{
-		api.POST("/servers/start", h.StartServer)
-		api.DELETE("/servers/:name", h.StopServer)
+		// CSRF token endpoint (GET, no CSRF check needed)
+		api.GET("/csrf-token", h.GetCSRFToken)
+
+		// Read-only endpoints (no CSRF protection needed)
 		api.GET("/servers", h.ListServers)
+		api.GET("/servers/:name", h.GetServer)
 		api.GET("/servers/:name/logs", h.GetServerLogs)
-		api.POST("/heartbeat", h.Heartbeat)
-		api.POST("/upload", h.UploadRelease)
 		api.GET("/history/servers", h.GetServerHistory)
 		api.GET("/history/uploads", h.GetUploadHistory)
+		api.GET("/dockerfiles/presets", h.ListDockerfilePresets)
+		api.GET("/dockerfiles/active", h.GetActiveDockerfile)
+		api.GET("/dockerfiles/history", h.GetDockerfileHistory)
+
+		// State-changing endpoints (CSRF protection required)
+		csrfProtected := api.Group("")
+		csrfProtected.Use(security.CSRFMiddleware(h.csrfManager))
+		{
+			csrfProtected.POST("/servers/start", h.StartServer)
+			csrfProtected.DELETE("/servers/:name", h.StopServer)
+			csrfProtected.POST("/heartbeat", h.Heartbeat)
+			csrfProtected.POST("/upload", h.UploadRelease)
+			csrfProtected.POST("/dockerfiles/active", h.SetActiveDockerfile)
+		}
 	}
 
 	return r

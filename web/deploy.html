@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Indiekku - New Release</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>indiekku</h1>
+            <span class="subtitle">Deploy</span>
+        </div>
+        <nav class="nav-links" id="navLinks" style="display: none;">
+            <a href="/" class="nav-link">DASHBOARD</a>
+            <a href="/deploy" class="nav-link active">DEPLOY</a>
+            <a href="/logs" class="nav-link">LOGS</a>
+            <a href="/history" class="nav-link">HISTORY</a>
+            <button class="logout-btn" id="logoutBtn">LOGOUT</button>
+        </nav>
+    </header>
+
+    <div class="container">
+        <!-- Login Page -->
+        <div class="login-page" id="loginPage">
+            <div class="login-box">
+                <h2 style="margin-bottom: 1.5rem;">Login</h2>
+                <div id="authMessage" class="message"></div>
+                <form id="authForm">
+                    <label for="apiKey">API Key</label>
+                    <input
+                        type="password"
+                        id="apiKey"
+                        name="apiKey"
+                        placeholder="Enter your API key"
+                        required
+                    >
+                    <button type="submit">Login</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Deploy Dashboard -->
+        <div class="dashboard" id="dashboard">
+            <div id="deployMessage" class="message"></div>
+
+            <div class="deploy-grid">
+                <!-- Server Build Upload -->
+                <div class="deploy-section">
+                    <h3>Server Build</h3>
+                    <div class="drop-zone" id="dropZone">
+                        <div class="drop-zone-content">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="17 8 12 3 7 8"/>
+                                <line x1="12" y1="3" x2="12" y2="15"/>
+                            </svg>
+                            <div class="drop-zone-text">Drop your server build here</div>
+                            <div class="drop-zone-or">or</div>
+                            <span class="drop-zone-button">Browse Files</span>
+                            <div class="file-info">.zip files only</div>
+                        </div>
+                    </div>
+                    <input type="file" id="fileInput" accept=".zip" style="display: none;">
+                    <div class="selected-file" id="selectedFile">
+                        <div class="selected-file-name" id="selectedFileName"></div>
+                        <div class="selected-file-size" id="selectedFileSize"></div>
+                        <button class="selected-file-clear" onclick="clearSelectedFile()">Remove</button>
+                    </div>
+                    <div class="progress" id="uploadProgress">
+                        <div class="progress-bar" id="progressBar"></div>
+                    </div>
+                </div>
+
+                <!-- Dockerfile Selection -->
+                <div class="deploy-section">
+                    <h3>Dockerfile</h3>
+                    <div class="preset-options" id="presetOptions">
+                        <!-- Presets loaded dynamically -->
+                    </div>
+                    <div class="custom-dockerfile-upload" id="customDockerfileUpload">
+                        <label for="dockerfileInput">Upload Custom Dockerfile</label>
+                        <input type="file" id="dockerfileInput" accept="Dockerfile,*">
+                    </div>
+                </div>
+
+                <!-- Port Configuration -->
+                <div class="deploy-section">
+                    <h3>Internal Port</h3>
+                    <p style="color: #888; font-size: 0.9rem; margin-bottom: 0.5rem;">Port your server listens on inside the container</p>
+                    <input type="number" id="defaultPort" placeholder="7777" min="1" max="65535" style="width: 100%; padding: 0.75rem; background: #1a1a2e; border: 1px solid #333; color: #fff; border-radius: 4px;">
+                </div>
+            </div>
+
+            <div class="deploy-actions">
+                <button class="deploy-btn" id="deployBtn" onclick="deploy()" disabled>DEPLOY</button>
+                <div class="deploy-status" id="deployStatus"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let apiKey = '';
+        let isAuthenticated = false;
+        let csrfToken = '';
+        let selectedFile = null;
+        let selectedDockerfile = null;
+        let selectedPreset = 'binary';
+
+        // Fetch CSRF token for state-changing requests
+        async function fetchCSRFToken() {
+            try {
+                const response = await fetch('/api/v1/csrf-token', {
+                    headers: { 'Authorization': 'Bearer ' + apiKey }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    csrfToken = data.csrf_token;
+                }
+            } catch (error) {
+                console.error('Failed to fetch CSRF token:', error);
+            }
+        }
+
+        // Check if API key is stored
+        const storedKey = localStorage.getItem('indiekku_api_key');
+        if (storedKey) {
+            apiKey = storedKey;
+            verifyAuth();
+        }
+
+        // Auth form handler
+        document.getElementById('authForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const key = document.getElementById('apiKey').value;
+            apiKey = key;
+            await verifyAuth();
+        });
+
+        // Verify authentication
+        async function verifyAuth() {
+            try {
+                const response = await fetch('/api/v1/servers', {
+                    headers: {
+                        'Authorization': 'Bearer ' + apiKey
+                    }
+                });
+
+                if (response.ok) {
+                    localStorage.setItem('indiekku_api_key', apiKey);
+                    setAuthenticated(true);
+                    showMessage('authMessage', 'Authentication successful!', 'success');
+                } else {
+                    setAuthenticated(false);
+                    showMessage('authMessage', 'Invalid API key', 'error');
+                    localStorage.removeItem('indiekku_api_key');
+                }
+            } catch (error) {
+                setAuthenticated(false);
+                showMessage('authMessage', 'Failed to verify authentication', 'error');
+            }
+        }
+
+        // Set authenticated state
+        function setAuthenticated(authenticated) {
+            isAuthenticated = authenticated;
+            const loginPage = document.getElementById('loginPage');
+            const dashboard = document.getElementById('dashboard');
+            const navLinks = document.getElementById('navLinks');
+
+            if (authenticated) {
+                loginPage.classList.add('hidden');
+                dashboard.classList.add('visible');
+                navLinks.style.display = 'flex';
+                fetchCSRFToken();
+                loadPresets();
+            } else {
+                loginPage.classList.remove('hidden');
+                dashboard.classList.remove('visible');
+                navLinks.style.display = 'none';
+            }
+        }
+
+        // Load presets
+        async function loadPresets() {
+            try {
+                const response = await fetch('/api/v1/dockerfiles/presets', {
+                    headers: { 'Authorization': 'Bearer ' + apiKey }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const presets = data.presets || [];
+                    renderPresets(presets);
+                }
+            } catch (error) {
+                console.error('Error loading presets:', error);
+            }
+        }
+
+        // Render preset options
+        function renderPresets(presets) {
+            const container = document.getElementById('presetOptions');
+            const descriptions = {
+                'unity': 'Optimized for Unity game servers with all required dependencies',
+                'binary': 'Minimal container for prebuilt binaries (Go, Rust, C++, etc.)'
+            };
+
+            let html = presets.map(preset => {
+                const name = preset.name || preset;
+                const isDefault = name === 'binary';
+                return `
+                    <label class="preset-option ${isDefault ? 'selected' : ''}" data-preset="${escapeHtml(name)}">
+                        <input type="radio" name="preset" value="${escapeHtml(name)}" ${isDefault ? 'checked' : ''}>
+                        <div class="preset-option-content">
+                            <div class="preset-option-name">${escapeHtml(name)}${isDefault ? ' (default)' : ''}</div>
+                            <div class="preset-option-desc">${descriptions[name] || 'Preset Dockerfile'}</div>
+                        </div>
+                    </label>
+                `;
+            }).join('');
+
+            // Add custom option
+            html += `
+                <label class="preset-option" data-preset="custom">
+                    <input type="radio" name="preset" value="custom">
+                    <div class="preset-option-content">
+                        <div class="preset-option-name">Custom</div>
+                        <div class="preset-option-desc">Upload your own Dockerfile</div>
+                    </div>
+                </label>
+            `;
+
+            container.innerHTML = html;
+
+            // Add click handlers
+            container.querySelectorAll('.preset-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    container.querySelectorAll('.preset-option').forEach(o => o.classList.remove('selected'));
+                    this.classList.add('selected');
+                    this.querySelector('input').checked = true;
+
+                    const preset = this.dataset.preset;
+                    selectedPreset = preset;
+
+                    const customUpload = document.getElementById('customDockerfileUpload');
+                    if (preset === 'custom') {
+                        customUpload.classList.add('visible');
+                    } else {
+                        customUpload.classList.remove('visible');
+                        selectedDockerfile = null;
+                    }
+
+                    updateDeployButton();
+                });
+            });
+        }
+
+        // Drop zone handlers
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileSelect(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+
+        function handleFileSelect(file) {
+            if (!file.name.endsWith('.zip')) {
+                showMessage('deployMessage', 'Please select a .zip file', 'error');
+                return;
+            }
+            selectedFile = file;
+            document.getElementById('selectedFileName').textContent = file.name;
+            document.getElementById('selectedFileSize').textContent = formatBytes(file.size);
+            document.getElementById('selectedFile').classList.add('visible');
+            updateDeployButton();
+        }
+
+        function clearSelectedFile() {
+            selectedFile = null;
+            fileInput.value = '';
+            document.getElementById('selectedFile').classList.remove('visible');
+            updateDeployButton();
+        }
+
+        // Dockerfile input handler
+        document.getElementById('dockerfileInput').addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                selectedDockerfile = e.target.files[0];
+                updateDeployButton();
+            }
+        });
+
+        function updateDeployButton() {
+            const btn = document.getElementById('deployBtn');
+            const hasFile = selectedFile !== null;
+            const hasDockerfile = selectedPreset !== 'custom' || selectedDockerfile !== null;
+            btn.disabled = !(hasFile && hasDockerfile);
+        }
+
+        // Deploy function
+        async function deploy() {
+            if (!selectedFile) {
+                showMessage('deployMessage', 'Please select a server build file', 'error');
+                return;
+            }
+
+            const deployBtn = document.getElementById('deployBtn');
+            const progress = document.getElementById('uploadProgress');
+            const progressBar = document.getElementById('progressBar');
+            const status = document.getElementById('deployStatus');
+
+            deployBtn.disabled = true;
+            progress.classList.add('show');
+            status.textContent = 'Uploading...';
+
+            const formData = new FormData();
+            formData.append('server_build', selectedFile);
+
+            // Add preset or custom dockerfile
+            if (selectedPreset !== 'custom') {
+                formData.append('preset', selectedPreset);
+            } else if (selectedDockerfile) {
+                formData.append('dockerfile', selectedDockerfile);
+            }
+
+            // Add default port if specified
+            const defaultPort = document.getElementById('defaultPort').value;
+            if (defaultPort) {
+                formData.append('default_port', defaultPort);
+            }
+
+            try {
+                const xhr = new XMLHttpRequest();
+
+                xhr.upload.addEventListener('progress', (e) => {
+                    if (e.lengthComputable) {
+                        const percent = (e.loaded / e.total) * 100;
+                        progressBar.style.width = percent + '%';
+                    }
+                });
+
+                xhr.addEventListener('load', () => {
+                    if (xhr.status === 200) {
+                        const data = JSON.parse(xhr.responseText);
+                        showMessage('deployMessage', `Release uploaded! Go to Dashboard to start servers.`, 'success');
+                        status.textContent = 'Ready!';
+                        clearSelectedFile();
+                    } else {
+                        const error = JSON.parse(xhr.responseText);
+                        showMessage('deployMessage', error.error || 'Deploy failed', 'error');
+                        status.textContent = 'Failed';
+                    }
+
+                    setTimeout(() => {
+                        progress.classList.remove('show');
+                        progressBar.style.width = '0%';
+                        status.textContent = '';
+                        updateDeployButton();
+                    }, 2000);
+                });
+
+                xhr.addEventListener('error', () => {
+                    showMessage('deployMessage', 'Network error during upload', 'error');
+                    status.textContent = 'Error';
+                    progress.classList.remove('show');
+                    updateDeployButton();
+                });
+
+                xhr.open('POST', '/api/v1/upload');
+                xhr.setRequestHeader('Authorization', 'Bearer ' + apiKey);
+                xhr.setRequestHeader('X-CSRF-Token', csrfToken);
+                xhr.send(formData);
+            } catch (error) {
+                showMessage('deployMessage', 'Deploy failed: ' + error.message, 'error');
+                status.textContent = 'Error';
+                progress.classList.remove('show');
+                updateDeployButton();
+            }
+        }
+
+        // Utility functions
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showMessage(elementId, text, type) {
+            const messageEl = document.getElementById(elementId);
+            messageEl.textContent = text;
+            messageEl.className = 'message show ' + type;
+
+            setTimeout(() => {
+                messageEl.classList.remove('show');
+            }, 5000);
+        }
+
+        // Logout handler
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            localStorage.removeItem('indiekku_api_key');
+            apiKey = '';
+            setAuthenticated(false);
+        });
+    </script>
+</body>
+</html>
