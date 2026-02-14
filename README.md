@@ -3,7 +3,7 @@
 ![Tests](https://github.com/MironCo/indiekku/actions/workflows/test.yml/badge.svg)
 [![Known Vulnerabilities](https://snyk.io/test/github/mironco/indiekku/badge.svg)](https://snyk.io/test/github/mironco/indiekku)
 
-**indiekku** is a lightweight game server orchestration tool for Unity multiplayer games. It manages Docker containers running Unity dedicated servers, providing a simple CLI, REST API, and web UI for server lifecycle management.
+**indiekku** is a lightweight game server orchestration tool. It manages Docker containers for dedicated game servers (Unity, Godot, custom binaries), providing a simple CLI, REST API, and web UI for lifecycle management.
 
 ## Features
 
@@ -14,7 +14,7 @@
 - **Rolling Deployment Support** - Upload new builds without affecting running servers
 - **Docker-based** - Isolated server instances with automatic port management
 - **REST API** - Programmatic server control via HTTP endpoints
-- **Auto-discovery** - Automatically detects Unity server binaries
+- **Dockerfile Presets** - Built-in presets for Unity servers and generic binaries
 - **Background daemon** - API server runs in the background for persistent management
 - **Port allocation** - Automatic port assignment starting from 7777
 
@@ -58,11 +58,12 @@ On first run, indiekku will generate an API key and display it. **Save this key*
 
 #### 2. Access the Web UI
 
-Navigate to `http://localhost:8080` and login with your API key.
+Navigate to `http://localhost:3000` and login with your API key.
 
 **Upload a Server Build:**
-- Drag and drop a ZIP file containing your Unity server build, or
-- Click "Browse Files" to select a file
+- Drag and drop a ZIP file containing your server build
+- Select a Dockerfile preset (Unity, Binary) or upload a custom Dockerfile
+- Set the internal port your server listens on
 - The build will be automatically extracted and the Docker image rebuilt
 
 **Start Servers:**
@@ -122,16 +123,17 @@ indiekku/
 
 ## How It Works
 
-1. **Place your Unity server build** in the `game_server/` directory (or upload via Web UI)
-2. **indiekku automatically detects** executables (`.x86_64` or `.exe`)
-3. **Docker image is built** with Unity dependencies on first start
-4. **Each server runs** in an isolated container with host networking
-5. **State is tracked** in-memory with thread-safe operations
-6. **History is persisted** to SQLite database (`indiekku.db`) for server events and uploads
+1. **Upload your server build** via the Web UI (ZIP file)
+2. **Select a Dockerfile preset** (Unity, Binary) or upload a custom one
+3. **Configure the internal port** your server listens on
+4. **Docker image is built** with your configuration
+5. **Each server runs** in an isolated container with port mapping (external → internal)
+6. **State is tracked** in-memory with thread-safe operations
+7. **History is persisted** to SQLite database (`indiekku.db`) for server events and uploads
 
 ## API Endpoints
 
-The API server runs on `localhost:8080` by default.
+The API server runs on `localhost:3000` by default.
 
 ### Health Check
 ```bash
@@ -198,16 +200,21 @@ This design allows the API to run continuously while CLI commands execute and ex
 ## Configuration
 
 Currently configured via constants:
-- **API Port**: `8080`
-- **Base game port**: `7777`
+- **API Port**: `3000`
+- **Base external port**: `7777` (auto-increments for additional containers)
+- **Internal port**: Configurable per deployment via Web UI
 - **Container naming**: Random video game themed names (e.g., "legendary-sword", "crimson-dragon")
-- **Docker image**: `unity-server`
+- **Docker image**: `indiekku-server`
 - **Server directory**: `game_server/`
 
 ## Roadmap
 
 - [x] Web dashboard
 - [x] Persistent history tracking (SQLite)
+- [x] Dockerfile presets (Unity, Binary)
+- [x] Custom Dockerfile upload
+- [x] Configurable internal port mapping
+- [ ] More game server presets (Godot, Unreal, etc.)
 - [ ] Configuration file support
 - [ ] Player count tracking via heartbeat
 - [ ] Automatic server restart on crash
