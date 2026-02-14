@@ -4,322 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Indiekku - History</title>
-    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: #fafafa;
-            color: #000000;
-            line-height: 1.6;
-            min-height: 100vh;
-            padding-top: 80px;
-        }
-
-        .container {
-            max-width: 100%;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        @media (min-width: 1400px) {
-            .container {
-                padding: 2rem 4rem;
-            }
-        }
-
-        header {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            background: #fafafa;
-            border-bottom: 2px solid #000000;
-            padding: 1rem 2rem;
-            z-index: 1000;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .header-content {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        h1 {
-            color: #000000;
-            font-size: 1.25rem;
-            font-weight: 700;
-            margin: 0;
-        }
-
-        .subtitle {
-            color: rgba(0, 0, 0, 0.6);
-            font-size: 0.875rem;
-            margin: 0;
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 1rem;
-            align-items: center;
-        }
-
-        .logout-btn {
-            width: auto;
-            padding: 0.5rem 1.5rem;
-            background: transparent;
-            color: #000000;
-            border: 2px solid #000000;
-            font-size: 0.875rem;
-            text-decoration: none;
-            text-align: center;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .logout-btn:hover {
-            background: #000000;
-            color: #ffffff;
-        }
-
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-        }
-
-        @media (max-width: 1200px) {
-            .dashboard-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .history-section {
-            background: transparent;
-            padding: 2rem;
-            border: 2px solid #000000;
-            max-height: 600px;
-            overflow-y: auto;
-        }
-
-        h2 {
-            color: #000000;
-            font-weight: 600;
-            margin-bottom: 1.5rem;
-        }
-
-        .history-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 1rem;
-        }
-
-        .history-table th,
-        .history-table td {
-            padding: 0.875rem;
-            text-align: left;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-        }
-
-        .history-table th {
-            background: rgba(0, 0, 0, 0.05);
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 0.75rem;
-            letter-spacing: 0.05em;
-            color: rgba(0, 0, 0, 0.6);
-        }
-
-        .history-table tbody tr:hover {
-            background: rgba(0, 0, 0, 0.02);
-        }
-
-        .event-badge {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 0;
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .event-badge.start {
-            background: rgba(0, 200, 0, 0.1);
-            border: 1px solid rgba(0, 200, 0, 0.3);
-            color: rgba(0, 150, 0, 1);
-        }
-
-        .event-badge.stop {
-            background: rgba(200, 0, 0, 0.1);
-            border: 1px solid rgba(200, 0, 0, 0.3);
-            color: rgba(150, 0, 0, 1);
-        }
-
-        .event-badge.success {
-            background: rgba(0, 200, 0, 0.1);
-            border: 1px solid rgba(0, 200, 0, 0.3);
-            color: rgba(0, 150, 0, 1);
-        }
-
-        .event-badge.failed {
-            background: rgba(200, 0, 0, 0.1);
-            border: 1px solid rgba(200, 0, 0, 0.3);
-            color: rgba(150, 0, 0, 1);
-        }
-
-        .timestamp {
-            color: rgba(0, 0, 0, 0.5);
-            font-size: 0.875rem;
-            font-family: monospace;
-        }
-
-        .container-name {
-            font-weight: 600;
-            font-family: monospace;
-        }
-
-        .port {
-            font-family: monospace;
-            color: rgba(0, 0, 0, 0.7);
-        }
-
-        .duration {
-            color: rgba(0, 0, 0, 0.6);
-            font-size: 0.875rem;
-        }
-
-        .filename {
-            font-weight: 600;
-            color: #000000;
-        }
-
-        .filesize {
-            color: rgba(0, 0, 0, 0.6);
-            font-size: 0.875rem;
-        }
-
-        .no-data {
-            text-align: center;
-            padding: 3rem;
-            color: rgba(0, 0, 0, 0.5);
-            font-style: italic;
-        }
-
-        .login-page {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            min-height: 60vh;
-        }
-
-        .login-page.hidden {
-            display: none;
-        }
-
-        .login-box {
-            background: transparent;
-            padding: 3rem;
-            border: 2px solid #000000;
-            max-width: 500px;
-            margin: 0 auto;
-            width: 100%;
-        }
-
-        .message {
-            padding: 1rem;
-            border-radius: 0;
-            margin-bottom: 1rem;
-            display: none;
-            border: 2px solid #000000;
-            background: #ffffff;
-        }
-
-        .message.show {
-            display: block;
-        }
-
-        .message.error {
-            background: #ffffff;
-            border-color: #000000;
-            color: #000000;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: rgba(0, 0, 0, 0.6);
-            font-weight: 500;
-            text-transform: uppercase;
-            font-size: 0.75rem;
-            letter-spacing: 0.05em;
-        }
-
-        input[type="password"] {
-            width: 100%;
-            padding: 0.875rem;
-            background: #ffffff;
-            border: 2px solid #000000;
-            border-radius: 0;
-            color: #000000;
-            font-size: 1rem;
-            margin-bottom: 1rem;
-            transition: all 0.2s;
-        }
-
-        input[type="password"]:focus {
-            outline: none;
-            border-color: #000000;
-            background: #ffffff;
-        }
-
-        button {
-            width: 100%;
-            padding: 1rem;
-            background: #000000;
-            color: #ffffff;
-            border: none;
-            border-radius: 0;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        button:hover {
-            background: rgba(0, 0, 0, 0.85);
-        }
-
-        .dashboard {
-            display: none;
-        }
-
-        .dashboard.visible {
-            display: block;
-        }
-    </style>
+    <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
     <header>
         <div class="header-content">
             <h1>indiekku</h1>
-            <span class="subtitle">Unity Server Management</span>
+            <span class="subtitle">Server History</span>
         </div>
         <div class="nav-links">
-            <a href="/" class="logout-btn" style="display: none; text-decoration: none;" id="dashboardLink">DASHBOARD</a>
+            <a href="/" class="logout-btn" style="display: none;" id="dashboardLink">DASHBOARD</a>
             <button class="logout-btn" id="logoutBtn" style="display: none;">LOGOUT</button>
         </div>
     </header>
@@ -346,6 +40,27 @@
 
         <!-- Dashboard -->
         <div class="dashboard" id="dashboard">
+            <!-- Dockerfile Configuration Section -->
+            <div class="dockerfile-section" id="dockerfileSection">
+                <h3>Dockerfile Configuration</h3>
+                <div class="dockerfile-info">
+                    <div class="dockerfile-info-item">
+                        <div class="dockerfile-info-label">Active Dockerfile</div>
+                        <div class="dockerfile-info-value" id="activeDockerfileName">Loading...</div>
+                    </div>
+                    <div class="dockerfile-info-item">
+                        <div class="dockerfile-info-label">Available Presets</div>
+                        <div class="dockerfile-info-value" id="availablePresets">-</div>
+                    </div>
+                </div>
+                <div class="dockerfile-history" id="dockerfileHistorySection">
+                    <div class="dockerfile-info-label" style="margin-bottom: 0.5rem;">Recent Dockerfile Changes</div>
+                    <div id="dockerfileHistory">
+                        <div style="color: rgba(0,0,0,0.5); font-size: 0.875rem;">No history available</div>
+                    </div>
+                </div>
+            </div>
+
             <div class="dashboard-grid">
                 <!-- Server Events Section -->
                 <div class="history-section">
@@ -419,6 +134,7 @@
                 logoutBtn.style.display = 'block';
                 dashboardLink.style.display = 'block';
                 loadHistory();
+                loadDockerfileMetadata();
                 startPolling();
             } else {
                 loginPage.classList.remove('hidden');
@@ -433,7 +149,7 @@
 
         function startPolling() {
             loadHistory();
-            pollingInterval = setInterval(loadHistory, 10000); // Poll every 10 seconds
+            pollingInterval = setInterval(loadHistory, 10000);
         }
 
         function stopPolling() {
@@ -597,6 +313,61 @@
         function formatTimestamp(timestamp) {
             const date = new Date(timestamp);
             return date.toLocaleString();
+        }
+
+        // Load Dockerfile metadata (active + presets + history)
+        async function loadDockerfileMetadata() {
+            if (!isAuthenticated) return;
+
+            try {
+                // Load active Dockerfile
+                const activeResponse = await fetch('/api/v1/dockerfiles/active', {
+                    headers: { 'Authorization': 'Bearer ' + apiKey }
+                });
+                if (activeResponse.ok) {
+                    const data = await activeResponse.json();
+                    document.getElementById('activeDockerfileName').textContent = data.name || 'unity (default)';
+                }
+
+                // Load presets
+                const presetsResponse = await fetch('/api/v1/dockerfiles/presets', {
+                    headers: { 'Authorization': 'Bearer ' + apiKey }
+                });
+                if (presetsResponse.ok) {
+                    const data = await presetsResponse.json();
+                    document.getElementById('availablePresets').textContent = (data.presets || []).join(', ') || '-';
+                }
+
+                // Load history
+                const historyResponse = await fetch('/api/v1/dockerfiles/history', {
+                    headers: { 'Authorization': 'Bearer ' + apiKey }
+                });
+                if (historyResponse.ok) {
+                    const data = await historyResponse.json();
+                    displayDockerfileHistory(data.history || []);
+                }
+            } catch (error) {
+                console.error('Error loading Dockerfile metadata:', error);
+            }
+        }
+
+        // Display Dockerfile history
+        function displayDockerfileHistory(history) {
+            const container = document.getElementById('dockerfileHistory');
+
+            if (!history || history.length === 0) {
+                container.innerHTML = '<div style="color: rgba(0,0,0,0.5); font-size: 0.875rem;">No history available</div>';
+                return;
+            }
+
+            // Show last 10 entries on history page
+            const recentHistory = history.slice(0, 10);
+            container.innerHTML = recentHistory.map(entry => `
+                <div class="dockerfile-history-item">
+                    <span class="dockerfile-history-name">${escapeHtml(entry.name)}</span>
+                    <span class="dockerfile-history-date">${formatTimestamp(entry.timestamp)}</span>
+                </div>
+            `).join('');
         }
 
         // Escape HTML

@@ -16,7 +16,35 @@ import (
 )
 
 // UploadRelease handles the upload of a new server build
+// Supports optional dockerfile or preset form fields to set the active Dockerfile
 func (h *ApiHandler) UploadRelease(c *gin.Context) {
+	// Check for dockerfile in the upload (optional)
+	dockerfileFile, dockerfileHeader, _ := c.Request.FormFile("dockerfile")
+	preset := c.PostForm("preset")
+
+	// Handle Dockerfile configuration if provided
+	if dockerfileFile != nil {
+		defer dockerfileFile.Close()
+		content, err := io.ReadAll(dockerfileFile)
+		if err == nil {
+			if err := docker.SetActiveDockerfile(string(content)); err == nil {
+				if h.historyManager != nil {
+					h.historyManager.RecordDockerfileChange(dockerfileHeader.Filename, "custom", "Uploaded with server build")
+				}
+				// Force image rebuild
+				docker.RemoveImage(h.imageName)
+			}
+		}
+	} else if preset != "" {
+		if err := docker.SetActiveFromPreset(preset); err == nil {
+			if h.historyManager != nil {
+				h.historyManager.RecordDockerfileChange(preset, "preset:"+preset, "Set with server build upload")
+			}
+			// Force image rebuild
+			docker.RemoveImage(h.imageName)
+		}
+	}
+
 	// Get the uploaded file
 	file, err := c.FormFile("server_build")
 	if err != nil {

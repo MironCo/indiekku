@@ -1,7 +1,6 @@
 package docker
 
 import (
-	_ "embed"
 	"fmt"
 	"os"
 	"os/exec"
@@ -9,12 +8,18 @@ import (
 )
 
 const (
-	DefaultImageName       = "unity-server"
-	DefaultContainerPrefix = "unity-server-"
+	DefaultImageName       = "indiekku-server"
+	DefaultContainerPrefix = "indiekku-"
 )
 
-//go:embed dockerfile_embed
-var dockerfileContent string
+// ContainerConfig holds all container run options
+type ContainerConfig struct {
+	Name      string   // Container name
+	ImageName string   // Docker image name
+	Port      string   // Port to expose (used for tracking, not necessarily passed to container)
+	Command   string   // Override CMD (empty = use Dockerfile CMD)
+	Args      []string // Override args (empty = use Dockerfile defaults)
+}
 
 // CheckDockerInstalled checks if Docker is installed and running
 func CheckDockerInstalled() error {
@@ -32,9 +37,17 @@ func ImageExists(imageName string) bool {
 	return err == nil && len(output) > 0
 }
 
-// BuildImage builds a Docker image from the Dockerfile
+// BuildImage builds a Docker image using the active Dockerfile
 func BuildImage(imageName string) error {
-	// Write embedded Dockerfile to temp file
+	content, err := GetActiveDockerfile()
+	if err != nil {
+		return fmt.Errorf("failed to get active Dockerfile: %w", err)
+	}
+	return BuildImageFromContent(imageName, content)
+}
+
+// BuildImageFromContent builds a Docker image from the provided Dockerfile content
+func BuildImageFromContent(imageName, dockerfileContent string) error {
 	tempDir := os.TempDir()
 	dockerfilePath := filepath.Join(tempDir, "Dockerfile.indiekku")
 
@@ -50,13 +63,16 @@ func BuildImage(imageName string) error {
 }
 
 // RunContainer starts a Docker container with the specified configuration
-func RunContainer(containerName, imageName, port, serverBinary string) error {
-	cmd := exec.Command("docker", "run", "--rm", "-d",
-		"--network", "host", // This will make Unity bind to both IPv4 and IPv6
-		"--name", containerName,
-		imageName,
-		serverBinary, "-port", port)
+func RunContainer(cfg ContainerConfig) error {
+	args := []string{"run", "--rm", "-d", "--network", "host", "--name", cfg.Name, cfg.ImageName}
 
+	// Add command and args if specified
+	if cfg.Command != "" {
+		args = append(args, cfg.Command)
+		args = append(args, cfg.Args...)
+	}
+
+	cmd := exec.Command("docker", args...)
 	return cmd.Start()
 }
 
@@ -70,4 +86,10 @@ func StopContainer(containerName string) error {
 func ListContainers(nameFilter string) ([]byte, error) {
 	cmd := exec.Command("docker", "ps", "--filter", "name="+nameFilter, "--format", "{{.ID}}\t{{.Names}}\t{{.Status}}\t{{.Ports}}")
 	return cmd.Output()
+}
+
+// RemoveImage removes a Docker image
+func RemoveImage(imageName string) error {
+	cmd := exec.Command("docker", "rmi", "-f", imageName)
+	return cmd.Run()
 }

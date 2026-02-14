@@ -1,0 +1,714 @@
+/* Indiekku - Shared Styles */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: #fafafa;
+    color: #000000;
+    line-height: 1.6;
+    min-height: 100vh;
+    padding-top: 80px;
+}
+
+.container {
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+@media (min-width: 1400px) {
+    .container {
+        padding: 2rem 4rem;
+    }
+}
+
+/* Header */
+header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: #fafafa;
+    border-bottom: 2px solid #000000;
+    padding: 1rem 2rem;
+    z-index: 1000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+h1 {
+    color: #000000;
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.subtitle {
+    color: rgba(0, 0, 0, 0.6);
+    font-size: 0.875rem;
+    margin: 0;
+}
+
+/* Navigation */
+.nav-links {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.logout-btn,
+.back-btn {
+    width: auto;
+    padding: 0.5rem 1.5rem;
+    background: transparent;
+    color: #000000;
+    border: 2px solid #000000;
+    font-size: 0.875rem;
+    text-decoration: none;
+    text-align: center;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.logout-btn:hover,
+.back-btn:hover {
+    background: #000000;
+    color: #ffffff;
+}
+
+/* Login Page */
+.login-page {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 60vh;
+}
+
+.login-page.hidden {
+    display: none;
+}
+
+.login-box {
+    background: transparent;
+    padding: 3rem;
+    border: 2px solid #000000;
+    max-width: 500px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+/* Dashboard */
+.dashboard {
+    display: none;
+}
+
+.dashboard.visible {
+    display: block;
+}
+
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #000000;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+
+@media (max-width: 1024px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Typography */
+h2 {
+    color: #000000;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: rgba(0, 0, 0, 0.6);
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+}
+
+/* Form Elements */
+input[type="password"],
+input[type="file"] {
+    width: 100%;
+    padding: 0.875rem;
+    background: #ffffff;
+    border: 2px solid #000000;
+    border-radius: 0;
+    color: #000000;
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    transition: all 0.2s;
+}
+
+input[type="password"]:focus,
+input[type="file"]:focus {
+    outline: none;
+    border-color: #000000;
+    background: #ffffff;
+}
+
+select {
+    width: 100%;
+    padding: 0.875rem;
+    background: #ffffff;
+    border: 2px solid #000000;
+    border-radius: 0;
+    color: #000000;
+    font-size: 1rem;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+select:focus {
+    outline: none;
+    border-color: #000000;
+    background: #ffffff;
+}
+
+/* Buttons */
+button {
+    width: 100%;
+    padding: 1rem;
+    background: #000000;
+    color: #ffffff;
+    border: none;
+    border-radius: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+button:hover {
+    background: rgba(0, 0, 0, 0.85);
+    transform: translateY(-1px);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+button:disabled {
+    background: rgba(0, 0, 0, 0.2);
+    color: rgba(0, 0, 0, 0.3);
+    cursor: not-allowed;
+    transform: none;
+}
+
+.control-btn {
+    padding: 0.875rem 1.5rem;
+    background: #ffffff;
+    border: 2px solid #000000;
+    color: #000000;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 600;
+    font-size: 0.875rem;
+    width: auto;
+}
+
+.control-btn:hover {
+    background: #000000;
+    color: #ffffff;
+}
+
+.control-btn.active {
+    background: #000000;
+    color: #ffffff;
+}
+
+.stop-button {
+    padding: 0.5rem 1rem;
+    background: #ffffff;
+    border: 2px solid #000000;
+    color: #000000;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.stop-button:hover {
+    background: #000000;
+    color: #ffffff;
+}
+
+.stop-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Messages */
+.message {
+    padding: 1rem;
+    border-radius: 0;
+    margin-bottom: 1rem;
+    display: none;
+    border: 2px solid #000000;
+    background: #ffffff;
+}
+
+.message.show {
+    display: block;
+}
+
+.message.error {
+    background: #ffffff;
+    border-color: #000000;
+    color: #000000;
+}
+
+.message.success {
+    background: #ffffff;
+    border-color: #000000;
+    color: #000000;
+}
+
+/* Progress */
+.progress {
+    width: 100%;
+    height: 3px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 0;
+    overflow: hidden;
+    margin-top: 1rem;
+    display: none;
+}
+
+.progress.show {
+    display: block;
+}
+
+.progress-bar {
+    height: 100%;
+    background: #000000;
+    width: 0%;
+    transition: width 0.3s;
+}
+
+/* Sections */
+.upload-section,
+.servers-section,
+.history-section,
+.logs-section {
+    background: transparent;
+    padding: 2rem;
+    border-radius: 0;
+    border: 2px solid #000000;
+}
+
+.servers-section {
+    display: flex;
+    flex-direction: column;
+    max-height: 600px;
+}
+
+.servers-section h2 {
+    flex-shrink: 0;
+}
+
+.history-section {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+/* Drop Zone */
+.drop-zone {
+    border: 2px dashed rgba(0, 0, 0, 0.3);
+    border-radius: 0;
+    padding: 3rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    background: rgba(0, 0, 0, 0.02);
+    margin-bottom: 1rem;
+}
+
+.drop-zone:hover {
+    border-color: #000000;
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.drop-zone.dragover {
+    border-color: #000000;
+    background: rgba(0, 0, 0, 0.1);
+    border-style: solid;
+}
+
+.drop-zone-content {
+    pointer-events: none;
+}
+
+.drop-zone svg {
+    margin-bottom: 1rem;
+    opacity: 0.6;
+}
+
+.drop-zone-text {
+    font-size: 1.1rem;
+    color: #000000;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.drop-zone-or {
+    font-size: 0.9rem;
+    color: rgba(0, 0, 0, 0.5);
+    margin: 1rem 0;
+}
+
+.drop-zone-button {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    background: #ffffff;
+    border: 2px solid #000000;
+    color: #000000;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 600;
+    text-transform: none;
+    font-size: 1rem;
+    letter-spacing: normal;
+    pointer-events: auto;
+}
+
+.drop-zone-button:hover {
+    background: #000000;
+    color: #ffffff;
+}
+
+.file-info {
+    font-size: 0.9rem;
+    color: rgba(0, 0, 0, 0.6);
+    margin-top: 0.5rem;
+}
+
+/* Tables */
+.servers-table,
+.history-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+.servers-table th,
+.servers-table td,
+.history-table th,
+.history-table td {
+    padding: 0.875rem;
+    text-align: left;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.servers-table th,
+.history-table th {
+    background: rgba(0, 0, 0, 0.05);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    color: rgba(0, 0, 0, 0.6);
+}
+
+.servers-table tbody tr:hover,
+.history-table tbody tr:hover {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+/* Table Data Styles */
+.server-name,
+.container-name,
+.filename {
+    font-weight: 600;
+    color: #000000;
+}
+
+.server-port,
+.port {
+    font-family: monospace;
+    color: rgba(0, 0, 0, 0.7);
+}
+
+.server-players {
+    color: rgba(0, 0, 0, 0.7);
+}
+
+.server-uptime,
+.duration,
+.filesize {
+    color: rgba(0, 0, 0, 0.5);
+    font-size: 0.9rem;
+}
+
+.timestamp {
+    color: rgba(0, 0, 0, 0.5);
+    font-size: 0.875rem;
+    font-family: monospace;
+}
+
+/* Event Badges */
+.event-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.event-badge.start,
+.event-badge.success {
+    background: rgba(0, 200, 0, 0.1);
+    border: 1px solid rgba(0, 200, 0, 0.3);
+    color: rgba(0, 150, 0, 1);
+}
+
+.event-badge.stop,
+.event-badge.failed {
+    background: rgba(200, 0, 0, 0.1);
+    border: 1px solid rgba(200, 0, 0, 0.3);
+    color: rgba(150, 0, 0, 1);
+}
+
+/* Empty States */
+.no-servers,
+.no-data,
+.no-logs {
+    text-align: center;
+    padding: 2rem;
+    color: rgba(0, 0, 0, 0.5);
+    font-style: italic;
+}
+
+.loading {
+    text-align: center;
+    padding: 2rem;
+    color: rgba(0, 0, 0, 0.7);
+}
+
+/* Scrollbar Styles */
+#serversTable::-webkit-scrollbar,
+.history-section::-webkit-scrollbar {
+    width: 8px;
+}
+
+#serversTable::-webkit-scrollbar-track,
+.history-section::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+#serversTable::-webkit-scrollbar-thumb,
+.history-section::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 0;
+}
+
+#serversTable::-webkit-scrollbar-thumb:hover,
+.history-section::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+#serversTable {
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+}
+
+/* Logs Specific */
+.logs-container {
+    display: none;
+}
+
+.logs-container.visible {
+    display: block;
+}
+
+.logs-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #000000;
+}
+
+.controls {
+    background: transparent;
+    padding: 1.5rem;
+    border: 2px solid #000000;
+    margin-bottom: 2rem;
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: flex-end;
+}
+
+.control-group {
+    flex: 1;
+    min-width: 200px;
+}
+
+.control-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.logs-section {
+    height: calc(100vh - 350px);
+    display: flex;
+    flex-direction: column;
+}
+
+.logs-viewer {
+    background: #000000;
+    color: #ffffff;
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.logs-viewer::-webkit-scrollbar {
+    width: 12px;
+}
+
+.logs-viewer::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.logs-viewer::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 0;
+}
+
+.logs-viewer::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.logs-viewer .no-logs {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.logs-viewer .loading {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.log-info {
+    margin-bottom: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    background: rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    font-size: 0.75rem;
+}
+
+.log-info strong {
+    font-weight: 600;
+}
+
+/* Dockerfile Metadata Section */
+.dockerfile-section {
+    background: transparent;
+    padding: 1.5rem;
+    border: 2px solid #000000;
+    margin-bottom: 2rem;
+}
+
+.dockerfile-section h3 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 1rem;
+    color: rgba(0, 0, 0, 0.7);
+}
+
+.dockerfile-info {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+.dockerfile-info-item {
+    flex: 1;
+    min-width: 200px;
+}
+
+.dockerfile-info-label {
+    font-size: 0.75rem;
+    color: rgba(0, 0, 0, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.25rem;
+}
+
+.dockerfile-info-value {
+    font-weight: 600;
+    color: #000000;
+}
+
+.dockerfile-history {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.dockerfile-history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    font-size: 0.875rem;
+}
+
+.dockerfile-history-item:not(:last-child) {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.dockerfile-history-name {
+    font-weight: 500;
+}
+
+.dockerfile-history-date {
+    color: rgba(0, 0, 0, 0.5);
+    font-family: monospace;
+    font-size: 0.75rem;
+}

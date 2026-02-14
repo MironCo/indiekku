@@ -38,7 +38,9 @@ func NewAPIHandler(stateManager *state.StateHandler, historyManager *history.His
 
 // StartServerRequest represents the request body for starting a server
 type StartServerRequest struct {
-	Port string `json:"port,omitempty"`
+	Port    string   `json:"port,omitempty"`
+	Command string   `json:"command,omitempty"` // Custom command to run (overrides auto-detected binary)
+	Args    []string `json:"args,omitempty"`    // Custom args (overrides default -port behavior)
 }
 
 // StartServerResponse represents the response for starting a server
@@ -62,15 +64,6 @@ func (h *ApiHandler) StartServer(c *gin.Context) {
 		return
 	}
 
-	// Find server binary
-	serverBinary, err := server.FindBinary(h.serverDir)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": fmt.Sprintf("Failed to find server binary: %v", err),
-		})
-		return
-	}
-
 	// Determine port
 	port := req.Port
 	if port == "" {
@@ -80,6 +73,24 @@ func (h *ApiHandler) StartServer(c *gin.Context) {
 			"error": fmt.Sprintf("Port %s is already in use", port),
 		})
 		return
+	}
+
+	// Determine command and args
+	command := req.Command
+	args := req.Args
+
+	// If no custom command provided, try to find server binary (legacy behavior)
+	if command == "" {
+		serverBinary, err := server.FindBinary(h.serverDir)
+		if err != nil {
+			// No binary found and no command specified - that's okay if Dockerfile has CMD
+			fmt.Printf("No server binary found, using Dockerfile CMD: %v\n", err)
+		} else {
+			command = serverBinary
+			if len(args) == 0 {
+				args = []string{"-port", port}
+			}
+		}
 	}
 
 	// Generate a unique container name with video game theme
@@ -120,8 +131,15 @@ func (h *ApiHandler) StartServer(c *gin.Context) {
 		}
 	}
 
-	// Run the container
-	if err := docker.RunContainer(containerName, h.imageName, port, serverBinary); err != nil {
+	// Run the container with config
+	cfg := docker.ContainerConfig{
+		Name:      containerName,
+		ImageName: h.imageName,
+		Port:      port,
+		Command:   command,
+		Args:      args,
+	}
+	if err := docker.RunContainer(cfg); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": fmt.Sprintf("Failed to start container: %v", err),
 		})
@@ -132,6 +150,8 @@ func (h *ApiHandler) StartServer(c *gin.Context) {
 	h.stateManager.AddServer(&state.ServerInfo{
 		ContainerName: containerName,
 		Port:          port,
+		Command:       command,
+		Args:          args,
 		PlayerCount:   0,
 		StartedAt:     time.Now(),
 	})
@@ -146,7 +166,7 @@ func (h *ApiHandler) StartServer(c *gin.Context) {
 	c.JSON(http.StatusCreated, StartServerResponse{
 		ContainerName: containerName,
 		Port:          port,
-		Message:       "Game server started successfully",
+		Message:       "Container started successfully",
 	})
 }
 
@@ -326,6 +346,7 @@ func (h *ApiHandler) SetupRouter() *gin.Engine {
 	r.GET("/", h.ServeWebUI)
 	r.GET("/history", h.ServeHistoryUI)
 	r.GET("/logs", h.ServeLogsUI)
+	r.GET("/styles.css", h.ServeStyles)
 
 	// API routes (auth required)
 	api := r.Group("/api/v1")
@@ -340,6 +361,12 @@ func (h *ApiHandler) SetupRouter() *gin.Engine {
 		api.POST("/upload", h.UploadRelease)
 		api.GET("/history/servers", h.GetServerHistory)
 		api.GET("/history/uploads", h.GetUploadHistory)
+
+		// Dockerfile management
+		api.GET("/dockerfiles/presets", h.ListDockerfilePresets)
+		api.GET("/dockerfiles/active", h.GetActiveDockerfile)
+		api.POST("/dockerfiles/active", h.SetActiveDockerfile)
+		api.GET("/dockerfiles/history", h.GetDockerfileHistory)
 	}
 
 	return r

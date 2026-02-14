@@ -5,440 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Indiekku - Server Management</title>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: #fafafa;
-            color: #000000;
-            line-height: 1.6;
-            min-height: 100vh;
-            padding-top: 80px;
-        }
-
-        .container {
-            max-width: 100%;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        @media (min-width: 1400px) {
-            .container {
-                padding: 2rem 4rem;
-            }
-        }
-
-        header {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            background: #fafafa;
-            border-bottom: 2px solid #000000;
-            padding: 1rem 2rem;
-            z-index: 1000;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .header-content {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        h1 {
-            color: #000000;
-            font-size: 1.25rem;
-            font-weight: 700;
-            margin: 0;
-        }
-
-        .subtitle {
-            color: rgba(0, 0, 0, 0.6);
-            font-size: 0.875rem;
-            margin: 0;
-        }
-
-        .login-page {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            min-height: 60vh;
-        }
-
-        .login-page.hidden {
-            display: none;
-        }
-
-        .login-box {
-            background: transparent;
-            padding: 3rem;
-            border: 2px solid #000000;
-            max-width: 500px;
-            margin: 0 auto;
-            width: 100%;
-        }
-
-        .dashboard {
-            display: none;
-        }
-
-        .dashboard.visible {
-            display: block;
-        }
-
-        .dashboard-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid #000000;
-        }
-
-        .logout-btn {
-            width: auto;
-            padding: 0.5rem 1.5rem;
-            background: transparent;
-            color: #000000;
-            border: 2px solid #000000;
-            font-size: 0.875rem;
-        }
-
-        .logout-btn:hover {
-            background: #000000;
-            color: #ffffff;
-        }
-
-        .upload-section {
-            background: transparent;
-            padding: 2rem;
-            border-radius: 0;
-            border: 2px solid #000000;
-        }
-
-        h2 {
-            color: #000000;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: rgba(0, 0, 0, 0.6);
-            font-weight: 500;
-            text-transform: uppercase;
-            font-size: 0.75rem;
-            letter-spacing: 0.05em;
-        }
-
-        input[type="password"],
-        input[type="file"] {
-            width: 100%;
-            padding: 0.875rem;
-            background: #ffffff;
-            border: 2px solid #000000;
-            border-radius: 0;
-            color: #000000;
-            font-size: 1rem;
-            margin-bottom: 1rem;
-            transition: all 0.2s;
-        }
-
-        input[type="password"]:focus,
-        input[type="file"]:focus {
-            outline: none;
-            border-color: #000000;
-            background: #ffffff;
-        }
-
-        button {
-            width: 100%;
-            padding: 1rem;
-            background: #000000;
-            color: #ffffff;
-            border: none;
-            border-radius: 0;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        button:hover {
-            background: rgba(0, 0, 0, 0.85);
-            transform: translateY(-1px);
-        }
-
-        button:active {
-            transform: translateY(0);
-        }
-
-        button:disabled {
-            background: rgba(0, 0, 0, 0.2);
-            color: rgba(0, 0, 0, 0.3);
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .message {
-            padding: 1rem;
-            border-radius: 0;
-            margin-bottom: 1rem;
-            display: none;
-            border: 2px solid #000000;
-            background: #ffffff;
-        }
-
-        .message.show {
-            display: block;
-        }
-
-        .message.error {
-            background: #ffffff;
-            border-color: #000000;
-            color: #000000;
-        }
-
-        .message.success {
-            background: #ffffff;
-            border-color: #000000;
-            color: #000000;
-        }
-
-        .progress {
-            width: 100%;
-            height: 3px;
-            background: rgba(0, 0, 0, 0.1);
-            border-radius: 0;
-            overflow: hidden;
-            margin-top: 1rem;
-            display: none;
-        }
-
-        .progress.show {
-            display: block;
-        }
-
-        .progress-bar {
-            height: 100%;
-            background: #000000;
-            width: 0%;
-            transition: width 0.3s;
-        }
-
-        .file-info {
-            font-size: 0.9rem;
-            color: rgba(0, 0, 0, 0.6);
-            margin-top: 0.5rem;
-        }
-
-        .drop-zone {
-            border: 2px dashed rgba(0, 0, 0, 0.3);
-            border-radius: 0;
-            padding: 3rem 2rem;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            background: rgba(0, 0, 0, 0.02);
-            margin-bottom: 1rem;
-        }
-
-        .drop-zone:hover {
-            border-color: #000000;
-            background: rgba(0, 0, 0, 0.05);
-        }
-
-        .drop-zone.dragover {
-            border-color: #000000;
-            background: rgba(0, 0, 0, 0.1);
-            border-style: solid;
-        }
-
-        .drop-zone-content {
-            pointer-events: none;
-        }
-
-        .drop-zone svg {
-            margin-bottom: 1rem;
-            opacity: 0.6;
-        }
-
-        .drop-zone-text {
-            font-size: 1.1rem;
-            color: #000000;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-        }
-
-        .drop-zone-or {
-            font-size: 0.9rem;
-            color: rgba(0, 0, 0, 0.5);
-            margin: 1rem 0;
-        }
-
-        .drop-zone-button {
-            display: inline-block;
-            padding: 0.75rem 1.5rem;
-            background: #ffffff;
-            border: 2px solid #000000;
-            color: #000000;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-weight: 600;
-            text-transform: none;
-            font-size: 1rem;
-            letter-spacing: normal;
-            pointer-events: auto;
-        }
-
-        .drop-zone-button:hover {
-            background: #000000;
-            color: #ffffff;
-        }
-
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-        }
-
-        @media (max-width: 1024px) {
-            .dashboard-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .servers-section {
-            background: transparent;
-            padding: 2rem;
-            border-radius: 0;
-            border: 2px solid #000000;
-            display: flex;
-            flex-direction: column;
-            max-height: 600px;
-        }
-
-        .servers-section h2 {
-            flex-shrink: 0;
-        }
-
-        #serversTable {
-            overflow-y: auto;
-            flex: 1;
-            min-height: 0;
-        }
-
-        #serversTable::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        #serversTable::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.05);
-        }
-
-        #serversTable::-webkit-scrollbar-thumb {
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 0;
-        }
-
-        #serversTable::-webkit-scrollbar-thumb:hover {
-            background: rgba(0, 0, 0, 0.5);
-        }
-
-        .servers-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 1rem;
-        }
-
-        .servers-table th,
-        .servers-table td {
-            padding: 0.875rem;
-            text-align: left;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-        }
-
-        .servers-table th {
-            background: rgba(0, 0, 0, 0.05);
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 0.75rem;
-            letter-spacing: 0.05em;
-            color: rgba(0, 0, 0, 0.6);
-        }
-
-        .servers-table tbody tr:hover {
-            background: rgba(0, 0, 0, 0.02);
-        }
-
-        .server-name {
-            font-weight: 600;
-            color: #000000;
-        }
-
-        .server-port {
-            font-family: monospace;
-            color: rgba(0, 0, 0, 0.7);
-        }
-
-        .server-players {
-            color: rgba(0, 0, 0, 0.7);
-        }
-
-        .server-uptime {
-            color: rgba(0, 0, 0, 0.5);
-            font-size: 0.9rem;
-        }
-
-        .stop-button {
-            padding: 0.5rem 1rem;
-            background: #ffffff;
-            border: 2px solid #000000;
-            color: #000000;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-weight: 600;
-            font-size: 0.875rem;
-        }
-
-        .stop-button:hover {
-            background: #000000;
-            color: #ffffff;
-        }
-
-        .stop-button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .no-servers {
-            text-align: center;
-            padding: 2rem;
-            color: rgba(0, 0, 0, 0.5);
-            font-style: italic;
-        }
-    </style>
+    <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
     <header>
         <div class="header-content">
             <h1>indiekku</h1>
-            <span class="subtitle">Unity Server Management</span>
+            <span class="subtitle">Container Management</span>
         </div>
-        <div style="display: flex; gap: 1rem; align-items: center;">
-            <a href="/logs" class="logout-btn" style="display: none; width: auto; text-decoration: none; text-align: center;" id="logsLink">LOGS</a>
-            <a href="/history" class="logout-btn" style="display: none; width: auto; text-decoration: none; text-align: center;" id="historyLink">HISTORY</a>
+        <div class="nav-links">
+            <a href="/logs" class="logout-btn" style="display: none;" id="logsLink">LOGS</a>
+            <a href="/history" class="logout-btn" style="display: none;" id="historyLink">HISTORY</a>
             <button class="logout-btn" id="logoutBtn" style="display: none;">LOGOUT</button>
         </div>
     </header>
@@ -480,12 +57,35 @@
                 <div class="upload-section">
                 <h2>Upload New Release</h2>
                 <p style="color: rgba(0, 0, 0, 0.6); margin-bottom: 1.5rem;">
-                    Upload a ZIP file containing your Unity server build
+                    Upload a ZIP file containing your application
                 </p>
 
                 <div id="uploadMessage" class="message"></div>
 
                 <form id="uploadForm">
+                    <!-- Dockerfile Selection -->
+                    <div style="margin-bottom: 1.5rem;">
+                        <label>Dockerfile</label>
+                        <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.5rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; text-transform: none; font-size: 1rem; color: #000;">
+                                <input type="radio" name="dockerfileOption" value="unity" checked style="width: auto; margin: 0;">
+                                Unity (default)
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; text-transform: none; font-size: 1rem; color: #000;">
+                                <input type="radio" name="dockerfileOption" value="generic" style="width: auto; margin: 0;">
+                                Generic
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; text-transform: none; font-size: 1rem; color: #000;">
+                                <input type="radio" name="dockerfileOption" value="custom" style="width: auto; margin: 0;">
+                                Custom
+                            </label>
+                        </div>
+                        <div id="customDockerfileSection" style="display: none; margin-top: 0.5rem;">
+                            <input type="file" id="dockerfileInput" accept="" style="margin-bottom: 0;">
+                            <p style="font-size: 0.8rem; color: rgba(0,0,0,0.5); margin-top: 0.25rem;">Upload your custom Dockerfile</p>
+                        </div>
+                    </div>
+
                     <div id="dropZone" class="drop-zone">
                         <div class="drop-zone-content">
                             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -530,6 +130,18 @@
             apiKey = storedKey;
             verifyAuth();
         }
+
+        // Dockerfile option handling
+        document.querySelectorAll('input[name="dockerfileOption"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const customSection = document.getElementById('customDockerfileSection');
+                if (e.target.value === 'custom') {
+                    customSection.style.display = 'block';
+                } else {
+                    customSection.style.display = 'none';
+                }
+            });
+        });
 
         // Auth form handler
         document.getElementById('authForm').addEventListener('submit', async (e) => {
@@ -578,15 +190,15 @@
                 logoutBtn.style.display = 'block';
                 logsLink.style.display = 'block';
                 historyLink.style.display = 'block';
-                loadServers(); // Load servers when authenticated
-                startServerPolling(); // Start polling for server updates
+                loadServers();
+                startServerPolling();
             } else {
                 loginPage.classList.remove('hidden');
                 dashboard.classList.remove('visible');
                 logoutBtn.style.display = 'none';
                 logsLink.style.display = 'none';
                 historyLink.style.display = 'none';
-                stopServerPolling(); // Stop polling when logged out
+                stopServerPolling();
             }
         }
 
@@ -594,8 +206,8 @@
 
         // Start polling for server updates
         function startServerPolling() {
-            loadServers(); // Load immediately
-            pollingInterval = setInterval(loadServers, 5000); // Poll every 5 seconds
+            loadServers();
+            pollingInterval = setInterval(loadServers, 5000);
         }
 
         // Stop polling
@@ -682,7 +294,7 @@
                 });
 
                 if (response.ok) {
-                    loadServers(); // Refresh the list
+                    loadServers();
                 } else {
                     const data = await response.json();
                     alert('Failed to stop server: ' + (data.error || 'Unknown error'));
@@ -806,6 +418,17 @@
             const formData = new FormData();
             formData.append('server_build', file);
 
+            // Add Dockerfile option
+            const dockerfileOption = document.querySelector('input[name="dockerfileOption"]:checked').value;
+            if (dockerfileOption === 'custom') {
+                const dockerfileFile = document.getElementById('dockerfileInput').files[0];
+                if (dockerfileFile) {
+                    formData.append('dockerfile', dockerfileFile);
+                }
+            } else {
+                formData.append('preset', dockerfileOption);
+            }
+
             const uploadButton = document.getElementById('uploadButton');
             const progressDiv = document.getElementById('uploadProgress');
             const progressBar = document.getElementById('progressBar');
@@ -831,6 +454,8 @@
                         showMessage('uploadMessage', 'Release uploaded successfully!', 'success');
                         fileInput.value = '';
                         document.getElementById('fileInfo').textContent = '';
+                        document.getElementById('dockerfileInput').value = '';
+                        loadDockerfileMetadata(); // Refresh Dockerfile metadata
                         progressBar.style.width = '100%';
                         setTimeout(() => {
                             progressDiv.classList.remove('show');
@@ -906,7 +531,7 @@
                 if (response.ok) {
                     const data = await response.json();
                     alert(`Server started successfully!\nContainer: ${data.container_name}\nPort: ${data.port}`);
-                    loadServers(); // Refresh the server list
+                    loadServers();
                 } else {
                     const data = await response.json();
                     alert('Failed to start server: ' + (data.error || 'Unknown error'));
