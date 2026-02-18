@@ -3,6 +3,8 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"os"
 	"time"
 
@@ -395,6 +397,38 @@ func (h *ApiHandler) GetServerLogs(c *gin.Context) {
 		"container_name": containerName,
 		"logs":           string(logs),
 	})
+}
+
+// SetupGUIRouter creates a router that serves the web UI and proxies API calls
+// to the API server running on apiAddr (e.g. "127.0.0.1:3000").
+// This router is intended to be bound to 0.0.0.0 so the dashboard is
+// reachable externally while the API stays localhost-only.
+func (h *ApiHandler) SetupGUIRouter(apiAddr string) *gin.Engine {
+	gin.SetMode(gin.ReleaseMode)
+
+	r := gin.New()
+	r.Use(gin.Logger())
+	r.Use(gin.Recovery())
+	r.Use(security.SecurityHeadersMiddleware())
+
+	// Web UI pages
+	r.GET("/", h.ServeWebUI)
+	r.GET("/history", h.ServeHistoryUI)
+	r.GET("/logs", h.ServeLogsUI)
+	r.GET("/deploy", h.ServeDeployUI)
+	r.GET("/styles.css", h.ServeStyles)
+	r.GET("/favicon.svg", h.ServeFavicon)
+
+	// Proxy all API and health traffic to the localhost API server.
+	// The browser uses relative URLs (/api/v1/...) so requests arrive here
+	// and get forwarded transparently — no JS changes needed.
+	target, _ := url.Parse("http://" + apiAddr)
+	proxy := httputil.NewSingleHostReverseProxy(target)
+
+	r.GET("/health", func(c *gin.Context) { proxy.ServeHTTP(c.Writer, c.Request) })
+	r.Any("/api/v1/*path", func(c *gin.Context) { proxy.ServeHTTP(c.Writer, c.Request) })
+
+	return r
 }
 
 // SetupRouter configures all API routes

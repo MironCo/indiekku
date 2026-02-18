@@ -24,6 +24,7 @@ var (
 const (
 	defaultPort    = "7777"
 	defaultAPIPort = "3000"
+	defaultGUIPort = "9090"
 	defaultAPIURL  = "http://localhost:3000"
 	pidFile        = "indiekku.pid"
 )
@@ -64,6 +65,8 @@ func printUsage() {
 	fmt.Println("indiekku - Container orchestration tool")
 	fmt.Println("\nUsage:")
 	fmt.Println("  indiekku serve             Start the API server (runs in background)")
+	fmt.Println("                             API binds to 127.0.0.1:3000 (localhost only)")
+	fmt.Println("                             Web UI binds to 0.0.0.0:8080 (externally accessible)")
 	fmt.Println("  indiekku shutdown          Stop the API server")
 	fmt.Println("  indiekku logs              View API server logs")
 	fmt.Println("  indiekku logs <server>     View logs for a specific container")
@@ -193,9 +196,10 @@ func runServe() {
 			os.Exit(1)
 		}
 
-		fmt.Printf("✓ indiekku API server started\n")
-		fmt.Printf("  PID: %d\n", cmd.Process.Pid)
-		fmt.Printf("  Port: %s\n", apiPort)
+		fmt.Printf("✓ indiekku started\n")
+		fmt.Printf("  PID:    %d\n", cmd.Process.Pid)
+		fmt.Printf("  API:    127.0.0.1:%s  (localhost only)\n", apiPort)
+		fmt.Printf("  Web UI: 0.0.0.0:%s     (externally accessible)\n", defaultGUIPort)
 		fmt.Printf("\nUse 'indiekku logs' to view logs\n")
 		fmt.Printf("Use 'indiekku shutdown' to stop\n")
 		return
@@ -244,9 +248,20 @@ func runServe() {
 	// Setup and run the router
 	router := apiHandler.SetupRouter()
 
-	fmt.Printf("API server listening on port %s\n", apiPort)
+	// Start GUI server on all interfaces in a goroutine
+	guiRouter := apiHandler.SetupGUIRouter("127.0.0.1:" + apiPort)
+	go func() {
+		fmt.Printf("Web UI listening on 0.0.0.0:%s\n", defaultGUIPort)
+		if err := guiRouter.Run(":" + defaultGUIPort); err != nil {
+			fmt.Printf("Failed to start GUI server: %v\n", err)
+			os.Exit(1)
+		}
+	}()
+
+	// Start API server on localhost only
+	fmt.Printf("API server listening on 127.0.0.1:%s\n", apiPort)
 	fmt.Printf("PID: %d (saved to %s)\n", pid, pidFile)
-	if err := router.Run(":" + apiPort); err != nil {
+	if err := router.Run("127.0.0.1:" + apiPort); err != nil {
 		fmt.Printf("Failed to start API server: %v\n", err)
 		os.Exit(1)
 	}
