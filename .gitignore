@@ -57,6 +57,7 @@ indiekku.log
 
 # Docker
 .dockerignore
+dockerfiles/
 
 # Temporary files
 tmp/
