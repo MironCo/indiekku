@@ -1,0 +1,10 @@
+{
+  "name": "com.indiekku.server",
+  "version": "1.0.0",
+  "displayName": "Indiekku Server SDK",
+  "description": "Drop-in component that exposes a status endpoint so indiekku can track player count and server capacity without any API keys or outbound calls.",
+  "unity": "2021.3",
+  "author": {
+    "name": "indiekku"
+  }
+}

@@ -1,11 +1,13 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"sync"
 	"time"
 
 	"indiekku/internal/docker"
@@ -37,6 +39,8 @@ type ApiHandler struct {
 	imageName      string
 	apiKey         string
 	matchConfig    *MatchConfig
+	pollMu         sync.Mutex
+	pollCancels    map[string]context.CancelFunc
 }
 
 // NewHandler creates a new API handler
@@ -49,6 +53,7 @@ func NewAPIHandler(stateManager *state.StateHandler, historyManager *history.His
 		serverDir:      serverDir,
 		imageName:      imageName,
 		apiKey:         apiKey,
+		pollCancels:    make(map[string]context.CancelFunc),
 	}
 }
 
@@ -218,6 +223,16 @@ func (h *ApiHandler) StartServer(c *gin.Context) {
 		StartedAt:     time.Now(),
 	})
 
+	// Start polling the container's SDK status endpoint (if the Unity SDK is installed).
+	// Errors are silently ignored so servers without the SDK still work.
+	ctx, cancel := context.WithCancel(context.Background())
+	h.pollMu.Lock()
+	h.pollCancels[containerName] = cancel
+	h.pollMu.Unlock()
+	go docker.StartPolling(ctx, containerName, func(playerCount, maxPlayers int) {
+		h.stateManager.UpdateServerStatus(containerName, playerCount, maxPlayers)
+	})
+
 	// Record server start in history
 	if h.historyManager != nil {
 		if err := h.historyManager.RecordServerStart(containerName, port); err != nil {
@@ -265,6 +280,14 @@ func (h *ApiHandler) StopServer(c *gin.Context) {
 			fmt.Printf("Warning: Failed to record server stop: %v\n", err)
 		}
 	}
+
+	// Cancel the SDK status poller for this container.
+	h.pollMu.Lock()
+	if cancel, ok := h.pollCancels[containerName]; ok {
+		cancel()
+		delete(h.pollCancels, containerName)
+	}
+	h.pollMu.Unlock()
 
 	// Remove from state
 	h.stateManager.RemoveServer(containerName)
