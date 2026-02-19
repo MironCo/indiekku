@@ -7,13 +7,15 @@ GOGET=$(GOCMD) get
 GOMOD=$(GOCMD) mod
 BINARY_NAME=indiekku
 BINARY_PATH=./cmd/indiekku
+MATCH_BINARY_NAME=indiekku-match
+MATCH_BINARY_PATH=./cmd/indiekku-match
 BIN_DIR=bin
 
 # Version from git tag, fallback to "dev"
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 LDFLAGS := -X main.version=$(VERSION)
 
-.PHONY: all build clean test deps tidy run build-test
+.PHONY: all build clean test deps tidy run build-test build-match
 
 all: build
 
@@ -29,6 +31,11 @@ build:
 	@cp Dockerfile internal/docker/dockerfile_embed
 	mkdir -p $(BIN_DIR)
 	$(GOBUILD) -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/$(BINARY_NAME) $(BINARY_PATH)
+	$(GOBUILD) -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/$(MATCH_BINARY_NAME) $(MATCH_BINARY_PATH)
+
+build-match:
+	mkdir -p $(BIN_DIR)
+	$(GOBUILD) -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/$(MATCH_BINARY_NAME) $(MATCH_BINARY_PATH)
 
 clean:
 	@echo "Shutting down indiekku server..."

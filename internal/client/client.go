@@ -82,6 +82,8 @@ func (c *Client) addCSRFHeader(req *http.Request) error {
 		}
 	}
 	req.Header.Set("X-CSRF-Token", c.csrfToken)
+	// Clear after use — tokens are single-use
+	c.csrfToken = ""
 	return nil
 }
 
