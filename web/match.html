@@ -60,10 +60,6 @@
                         <div class="config-value" id="cfgMatchPort">—</div>
                     </div>
                     <div class="config-card">
-                        <div class="config-label">Max Players / Server</div>
-                        <div class="config-value" id="cfgMaxPlayers">—</div>
-                    </div>
-                    <div class="config-card">
                         <div class="config-label">Token Secret</div>
                         <div class="config-value" id="cfgTokenSecret">—</div>
                     </div>
@@ -191,7 +187,6 @@
                 const cfg = await resp.json();
                 document.getElementById('cfgPublicIP').textContent    = cfg.public_ip    || '(not set)';
                 document.getElementById('cfgMatchPort').textContent   = cfg.match_port   || '—';
-                document.getElementById('cfgMaxPlayers').textContent  = cfg.max_players  ?? '—';
                 document.getElementById('cfgTokenSecret').textContent = cfg.token_secret_status || '—';
                 document.getElementById('matchEndpoint').value =
                     `http://${cfg.public_ip || window.location.hostname}:${cfg.match_port}`;
@@ -242,7 +237,7 @@
                                 <tr>
                                     <td class="server-name">${escapeHtml(s.container_name)}</td>
                                     <td class="server-port">${escapeHtml(s.port)}</td>
-                                    <td class="server-players">${s.player_count} / ${s.max_players}</td>
+                                    <td class="server-players">${s.player_count}</td>
                                     <td>${badge}</td>
                                 </tr>
                             `;

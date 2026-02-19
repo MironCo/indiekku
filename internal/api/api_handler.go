@@ -25,7 +25,6 @@ import (
 type MatchConfig struct {
 	PublicIP          string `json:"public_ip"`
 	MatchPort         string `json:"match_port"`
-	MaxPlayers        int    `json:"max_players"`
 	TokenSecretStatus string `json:"token_secret_status"`
 }
 

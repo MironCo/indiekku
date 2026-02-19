@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 	"time"
 
@@ -75,7 +74,6 @@ func printUsage() {
 	fmt.Println("  indiekku serve [flags]     Start the API + matchmaking server (runs in background)")
 	fmt.Println("    --public-ip <ip>         Public IP for matchmaking responses (auto-detected if omitted)")
 	fmt.Println("    --match-port <port>      Matchmaking server port (default: 7070)")
-	fmt.Println("    --max-players <n>        Max players per server before spawning a new one (default: 8)")
 	fmt.Println("    --token-secret <secret>  HMAC secret for join tokens (auto-generated if omitted)")
 	fmt.Println("  indiekku shutdown          Stop the server")
 	fmt.Println("  indiekku logs              View server logs")
@@ -185,7 +183,6 @@ func runServe() {
 	apiPort := fs.String("api-port", defaultAPIPort, "")
 	publicIP := fs.String("public-ip", "", "")
 	matchPort := fs.String("match-port", "7070", "")
-	maxPlayers := fs.Int("max-players", 8, "")
 	tokenSecret := fs.String("token-secret", "", "")
 	if err := fs.Parse(filteredArgs); err != nil {
 		fmt.Printf("Error parsing flags: %v\n", err)
@@ -211,7 +208,6 @@ func runServe() {
 		args := []string{"serve", "__daemon__",
 			"--api-port", *apiPort,
 			"--match-port", *matchPort,
-			"--max-players", strconv.Itoa(*maxPlayers),
 		}
 		if *publicIP != "" {
 			args = append(args, "--public-ip", *publicIP)
@@ -320,7 +316,6 @@ func runServe() {
 	apiHandler.SetMatchConfig(api.MatchConfig{
 		PublicIP:          resolvedIP,
 		MatchPort:         *matchPort,
-		MaxPlayers:        *maxPlayers,
 		TokenSecretStatus: tokenSecretStatus,
 	})
 
@@ -340,7 +335,7 @@ func runServe() {
 		fmt.Printf("Failed to create internal client for matchmaking: %v\n", err)
 		os.Exit(1)
 	}
-	matchHandler := matchmaking.NewHandler(indiekkuClient, resolvedIP, *maxPlayers, secret)
+	matchHandler := matchmaking.NewHandler(indiekkuClient, resolvedIP, secret)
 
 	gin.SetMode(gin.ReleaseMode)
 	matchRouter := gin.New()

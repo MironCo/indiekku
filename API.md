@@ -26,6 +26,65 @@ X-CSRF-Token: <csrf-token>
 
 ---
 
+## Server Status Protocol
+
+indiekku polls each running container every 30 seconds to track player count and capacity. To opt in, expose a simple HTTP endpoint inside your game server — no SDK required.
+
+**Port:** `9999` (internal, never exposed externally)
+**Endpoint:** `GET /status`
+**Response:**
+```json
+{ "player_count": 3, "max_players": 8 }
+```
+
+That's it. Any HTTP server in any language works. A few examples:
+
+**Python**
+```python
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import json, threading
+
+players, max_players = 0, 8
+
+class Handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == '/status':
+            body = json.dumps({'player_count': players, 'max_players': max_players}).encode()
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(body)
+    def log_message(self, *args): pass  # silence access logs
+
+threading.Thread(target=lambda: HTTPServer(('', 9999), Handler).serve_forever(), daemon=True).start()
+```
+
+**Node.js**
+```js
+const http = require('http');
+let playerCount = 0, maxPlayers = 8;
+
+http.createServer((req, res) => {
+  if (req.method === 'GET' && req.url === '/status') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ player_count: playerCount, max_players: maxPlayers }));
+  }
+}).listen(9999);
+```
+
+**curl (shell script / any language that can exec)**
+```bash
+# One-liner sidecar — serve a static file that your game server updates
+while true; do
+  echo -e "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n$(cat /tmp/indiekku.json)" \
+    | nc -l -p 9999 -q 1
+done
+```
+
+If `max_players` is omitted or `0`, indiekku falls back to the default of `4`. If the endpoint is unreachable, player count stays at its last known value (or `0` if never reported).
+
+---
+
 ## Endpoints
 
 ### Health
@@ -451,7 +510,6 @@ The matchmaking server is built into `indiekku serve` — no separate binary nee
   --api-port 3000 \
   --match-port 7070 \
   --public-ip 1.2.3.4 \
-  --max-players 8 \
   --token-secret your-secret-here
 ```
 
@@ -460,7 +518,6 @@ The matchmaking server is built into `indiekku serve` — no separate binary nee
 | `--api-port` | `3000` | Port the API server listens on (localhost only) |
 | `--match-port` | `7070` | Port the matchmaking server listens on (`0.0.0.0`) |
 | `--public-ip` | *(auto-detected)* | Public IP returned to clients. Auto-detected via `api.ipify.org` on startup; override if needed |
-| `--max-players` | `8` | Player count threshold — starts a new server when all existing ones are at or above this |
 | `--token-secret` | *(auto-generated)* | HMAC-SHA256 secret for signing join tokens. **Set this explicitly** or tokens will be invalidated on restart |
 
 ---
@@ -485,7 +542,6 @@ Authorization: Bearer <api-key>
 {
   "public_ip": "1.2.3.4",
   "match_port": "7070",
-  "max_players": 8,
   "token_secret_status": "configured"
 }
 ```
@@ -532,7 +588,7 @@ Finds an open game server or starts a new one, then returns the connection addre
 
 **Match logic:**
 1. Lists all running servers from indiekku
-2. Returns the first server where `player_count < max_players`
+2. Returns the first server where `player_count < max_players` (per-server value reported by the Unity SDK, falls back to `4`)
 3. If all servers are full (or none exist), starts a new one via indiekku
 4. Issues a 60-second HMAC-SHA256 signed join token
 

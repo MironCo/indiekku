@@ -60,7 +60,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	handler := matchmaking.NewHandler(indiekkuClient, *publicIP, *maxPlayers, secret)
+	handler := matchmaking.NewHandler(indiekkuClient, *publicIP, secret)
 
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()

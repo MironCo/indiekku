@@ -191,6 +191,7 @@ type ServerInfo struct {
 	ContainerName string    `json:"container_name"`
 	Port          string    `json:"port"`
 	PlayerCount   int       `json:"player_count"`
+	MaxPlayers    int       `json:"max_players,omitempty"`
 	StartedAt     time.Time `json:"started_at"`
 }
 

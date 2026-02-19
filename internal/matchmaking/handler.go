@@ -10,23 +10,24 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const joinTokenTTL = 60 * time.Second
+const (
+	joinTokenTTL      = 60 * time.Second
+	defaultMaxPlayers = 4 // fallback when the Unity SDK hasn't reported max_players
+)
 
 // Handler handles matchmaking HTTP requests
 type Handler struct {
-	indiekku   *client.Client
-	publicIP   string
-	maxPlayers int
-	secret     string
+	indiekku *client.Client
+	publicIP string
+	secret   string
 }
 
 // NewHandler creates a new matchmaking handler
-func NewHandler(indiekku *client.Client, publicIP string, maxPlayers int, secret string) *Handler {
+func NewHandler(indiekku *client.Client, publicIP string, secret string) *Handler {
 	return &Handler{
-		indiekku:   indiekku,
-		publicIP:   publicIP,
-		maxPlayers: maxPlayers,
-		secret:     secret,
+		indiekku: indiekku,
+		publicIP: publicIP,
+		secret:   secret,
 	}
 }
 
@@ -100,12 +101,13 @@ func (h *Handler) ListServers(c *gin.Context) {
 
 	entries := make([]ServerListEntry, 0, len(resp.Servers))
 	for _, s := range resp.Servers {
+		max := effectiveMax(s)
 		entries = append(entries, ServerListEntry{
 			ContainerName: s.ContainerName,
 			Port:          s.Port,
 			PlayerCount:   s.PlayerCount,
-			MaxPlayers:    h.maxPlayers,
-			Full:          s.PlayerCount >= h.maxPlayers,
+			MaxPlayers:    max,
+			Full:          s.PlayerCount >= max,
 		})
 	}
 
@@ -136,8 +138,9 @@ func (h *Handler) Join(c *gin.Context) {
 		return
 	}
 
-	if target.PlayerCount >= h.maxPlayers {
-		c.JSON(http.StatusConflict, gin.H{"error": fmt.Sprintf("server %q is full (%d/%d)", containerName, target.PlayerCount, h.maxPlayers)})
+	max := effectiveMax(target)
+	if target.PlayerCount >= max {
+		c.JSON(http.StatusConflict, gin.H{"error": fmt.Sprintf("server %q is full (%d/%d)", containerName, target.PlayerCount, max)})
 		return
 	}
 
@@ -164,10 +167,19 @@ func (h *Handler) findOpenServer() (*client.ServerInfo, error) {
 	}
 
 	for _, s := range resp.Servers {
-		if s.PlayerCount < h.maxPlayers {
+		if s.PlayerCount < effectiveMax(s) {
 			return s, nil
 		}
 	}
 
 	return nil, nil
+}
+
+// effectiveMax returns the server's reported max players, or defaultMaxPlayers
+// if the Unity SDK hasn't reported one yet.
+func effectiveMax(s *client.ServerInfo) int {
+	if s.MaxPlayers > 0 {
+		return s.MaxPlayers
+	}
+	return defaultMaxPlayers
 }
