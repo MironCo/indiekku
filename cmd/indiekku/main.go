@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/rand"
+	"crypto/tls"
 	"encoding/hex"
 	"flag"
 	"fmt"
@@ -235,7 +236,7 @@ func runServe() {
 		fmt.Printf("✓ indiekku started\n")
 		fmt.Printf("  PID:       %d\n", cmd.Process.Pid)
 		fmt.Printf("  API:       127.0.0.1:%s  (localhost only)\n", *apiPort)
-		fmt.Printf("  Web UI:    0.0.0.0:%s     (externally accessible)\n", defaultGUIPort)
+		fmt.Printf("  Web UI:    https://0.0.0.0:%s  (HTTPS, self-signed cert)\n", defaultGUIPort)
 		fmt.Printf("  Match:     0.0.0.0:%s     (matchmaking)\n", *matchPort)
 		fmt.Printf("\nUse 'indiekku logs' to view logs\n")
 		fmt.Printf("Use 'indiekku shutdown' to stop\n")
@@ -319,11 +320,28 @@ func runServe() {
 		TokenSecretStatus: tokenSecretStatus,
 	})
 
-	// Start GUI server
+	// Start GUI server with self-signed TLS
 	guiRouter := apiHandler.SetupGUIRouter("127.0.0.1:"+*apiPort, "127.0.0.1:"+*matchPort)
 	go func() {
-		fmt.Printf("Web UI listening on 0.0.0.0:%s\n", defaultGUIPort)
-		if err := guiRouter.Run(":" + defaultGUIPort); err != nil {
+		cert, err := security.GenerateSelfSignedCert(resolvedIP)
+		if err != nil {
+			fmt.Printf("Warning: Failed to generate TLS cert, falling back to HTTP: %v\n", err)
+			fmt.Printf("Web UI listening on 0.0.0.0:%s (HTTP)\n", defaultGUIPort)
+			if err := guiRouter.Run(":" + defaultGUIPort); err != nil {
+				fmt.Printf("Failed to start GUI server: %v\n", err)
+				os.Exit(1)
+			}
+			return
+		}
+		tlsCfg := &tls.Config{Certificates: []tls.Certificate{cert}}
+		ln, err := tls.Listen("tcp", ":"+defaultGUIPort, tlsCfg)
+		if err != nil {
+			fmt.Printf("Failed to start GUI TLS listener: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Web UI listening on 0.0.0.0:%s (HTTPS)\n", defaultGUIPort)
+		srv := &http.Server{Handler: guiRouter}
+		if err := srv.Serve(ln); err != nil {
 			fmt.Printf("Failed to start GUI server: %v\n", err)
 			os.Exit(1)
 		}
