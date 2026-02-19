@@ -66,7 +66,9 @@ func main() {
 	r := gin.Default()
 
 	r.GET("/health", handler.Health)
+	r.GET("/servers", handler.ListServers)
 	r.POST("/match", handler.Match)
+	r.POST("/join/:name", handler.Join)
 
 	fmt.Printf("✓ indiekku-match started\n")
 	fmt.Printf("  Listening: 0.0.0.0:%s\n", *port)

@@ -442,7 +442,70 @@ Authorization: Bearer <api-key>
 
 ---
 
+## indiekku-match (Matchmaking Server)
+
+`indiekku-match` is a separate binary that runs alongside indiekku. It is internet-facing and handles player match requests, using the indiekku API (localhost only) to start and manage game servers.
+
+### Starting indiekku-match
+
+```bash
+./bin/indiekku-match \
+  --public-ip 1.2.3.4 \
+  --port 7070 \
+  --max-players 8 \
+  --token-secret your-secret-here
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--public-ip` | *(required)* | Public IP returned to clients so they can connect to game servers |
+| `--port` | `7070` | Port the matchmaking server listens on (`0.0.0.0`) |
+| `--max-players` | `8` | Player count threshold — starts a new server when all existing ones are at or above this |
+| `--token-secret` | *(auto-generated)* | Secret for signing join tokens. **Set this explicitly** or tokens will be invalidated on restart |
+| `--indiekku-url` | `http://localhost:3000` | indiekku API URL |
+
+> `indiekku-match` reads `.indiekku_apikey` automatically from the working directory. Run it from the same directory as `indiekku serve`.
+
+### Endpoints
+
+#### `GET /health`
+
+**Response `200`**
+```json
+{ "status": "ok" }
+```
+
+#### `POST /match`
+
+Finds an open game server or starts a new one, then returns the connection address and a short-lived join token.
+
+**Match logic:**
+1. Lists all running servers from indiekku
+2. Returns the first server where `player_count < max_players`
+3. If all servers are full (or none exist), starts a new one via indiekku
+4. Issues a 60-second HMAC-SHA256 signed join token
+
+No request body required.
+
+**Response `200`**
+```json
+{
+  "ip": "1.2.3.4",
+  "port": "7777",
+  "container_name": "legendary-sword",
+  "join_token": "eyJjIjoibGVnZW5kYXJ5LXN3b3JkIiwicCI6Ijc3NzciLCJleHAiOjE3MDAwMDAwMDB9.ABC123"
+}
+```
+
+**Join token format:** `base64url(payload).base64url(HMAC-SHA256(secret, payload))`
+
+Payload contains `container_name`, `port`, and `exp` (Unix expiry). Validate it in your game server using `ValidateJoinToken` from `internal/matchmaking/tokens.go`.
+
+---
+
 ## Quick Reference
+
+### indiekku API (`localhost:3000`)
 
 | Method | Endpoint | Auth | CSRF | Description |
 |--------|----------|------|------|-------------|
@@ -461,3 +524,10 @@ Authorization: Bearer <api-key>
 | `GET` | `/api/v1/dockerfiles/history` | ✓ | — | Dockerfile change history |
 | `GET` | `/api/v1/history/servers` | ✓ | — | Server event history |
 | `GET` | `/api/v1/history/uploads` | ✓ | — | Upload history |
+
+### indiekku-match (`0.0.0.0:7070`)
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `GET` | `/health` | — | Health check |
+| `POST` | `/match` | — | Request a match, get server address + join token |
