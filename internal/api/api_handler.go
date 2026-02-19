@@ -19,6 +19,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// MatchConfig holds the matchmaking configuration shown in the web UI.
+type MatchConfig struct {
+	PublicIP          string `json:"public_ip"`
+	MatchPort         string `json:"match_port"`
+	MaxPlayers        int    `json:"max_players"`
+	TokenSecretStatus string `json:"token_secret_status"`
+}
+
 // Handler handles HTTP requests for the game server API
 type ApiHandler struct {
 	stateManager   *state.StateHandler
@@ -28,6 +36,7 @@ type ApiHandler struct {
 	serverDir      string
 	imageName      string
 	apiKey         string
+	matchConfig    *MatchConfig
 }
 
 // NewHandler creates a new API handler
@@ -41,6 +50,20 @@ func NewAPIHandler(stateManager *state.StateHandler, historyManager *history.His
 		imageName:      imageName,
 		apiKey:         apiKey,
 	}
+}
+
+// SetMatchConfig stores the matchmaking config so the web UI can read it.
+func (h *ApiHandler) SetMatchConfig(cfg MatchConfig) {
+	h.matchConfig = &cfg
+}
+
+// GetMatchConfig handles GET /api/v1/matchmaking/config
+func (h *ApiHandler) GetMatchConfig(c *gin.Context) {
+	if h.matchConfig == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "matchmaking not configured"})
+		return
+	}
+	c.JSON(http.StatusOK, h.matchConfig)
 }
 
 // GetCSRFToken generates and returns a new CSRF token
@@ -400,10 +423,11 @@ func (h *ApiHandler) GetServerLogs(c *gin.Context) {
 }
 
 // SetupGUIRouter creates a router that serves the web UI and proxies API calls
-// to the API server running on apiAddr (e.g. "127.0.0.1:3000").
+// to the API server running on apiAddr (e.g. "127.0.0.1:3000") and matchmaking
+// calls to matchAddr (e.g. "127.0.0.1:7070").
 // This router is intended to be bound to 0.0.0.0 so the dashboard is
 // reachable externally while the API stays localhost-only.
-func (h *ApiHandler) SetupGUIRouter(apiAddr string) *gin.Engine {
+func (h *ApiHandler) SetupGUIRouter(apiAddr, matchAddr string) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 
 	r := gin.New()
@@ -416,17 +440,23 @@ func (h *ApiHandler) SetupGUIRouter(apiAddr string) *gin.Engine {
 	r.GET("/history", h.ServeHistoryUI)
 	r.GET("/logs", h.ServeLogsUI)
 	r.GET("/deploy", h.ServeDeployUI)
+	r.GET("/match", h.ServeMatchUI)
 	r.GET("/styles.css", h.ServeStyles)
 	r.GET("/favicon.svg", h.ServeFavicon)
 
 	// Proxy all API and health traffic to the localhost API server.
-	// The browser uses relative URLs (/api/v1/...) so requests arrive here
-	// and get forwarded transparently — no JS changes needed.
-	target, _ := url.Parse("http://" + apiAddr)
-	proxy := httputil.NewSingleHostReverseProxy(target)
+	apiTarget, _ := url.Parse("http://" + apiAddr)
+	apiProxy := httputil.NewSingleHostReverseProxy(apiTarget)
+	r.GET("/health", func(c *gin.Context) { apiProxy.ServeHTTP(c.Writer, c.Request) })
+	r.Any("/api/v1/*path", func(c *gin.Context) { apiProxy.ServeHTTP(c.Writer, c.Request) })
 
-	r.GET("/health", func(c *gin.Context) { proxy.ServeHTTP(c.Writer, c.Request) })
-	r.Any("/api/v1/*path", func(c *gin.Context) { proxy.ServeHTTP(c.Writer, c.Request) })
+	// Proxy /match-proxy/* to the matchmaking server, stripping the prefix.
+	matchTarget, _ := url.Parse("http://" + matchAddr)
+	matchProxy := httputil.NewSingleHostReverseProxy(matchTarget)
+	r.Any("/match-proxy/*path", func(c *gin.Context) {
+		c.Request.URL.Path = c.Param("path")
+		matchProxy.ServeHTTP(c.Writer, c.Request)
+	})
 
 	return r
 }
@@ -467,6 +497,7 @@ func (h *ApiHandler) SetupRouter() *gin.Engine {
 		api.GET("/csrf-token", h.GetCSRFToken)
 
 		// Read-only endpoints (no CSRF protection needed)
+		api.GET("/matchmaking/config", h.GetMatchConfig)
 		api.GET("/servers", h.ListServers)
 		api.GET("/servers/:name", h.GetServer)
 		api.GET("/servers/:name/logs", h.GetServerLogs)

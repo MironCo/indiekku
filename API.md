@@ -442,31 +442,59 @@ Authorization: Bearer <api-key>
 
 ---
 
-## indiekku-match (Matchmaking Server)
+## `indiekku serve` Flags
 
-`indiekku-match` is a separate binary that runs alongside indiekku. It is internet-facing and handles player match requests, using the indiekku API (localhost only) to start and manage game servers.
-
-### Starting indiekku-match
+The matchmaking server is built into `indiekku serve` — no separate binary needed.
 
 ```bash
-./bin/indiekku-match \
+./bin/indiekku serve \
+  --api-port 3000 \
+  --match-port 7070 \
   --public-ip 1.2.3.4 \
-  --port 7070 \
   --max-players 8 \
   --token-secret your-secret-here
 ```
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--public-ip` | *(required)* | Public IP returned to clients so they can connect to game servers |
-| `--port` | `7070` | Port the matchmaking server listens on (`0.0.0.0`) |
+| `--api-port` | `3000` | Port the API server listens on (localhost only) |
+| `--match-port` | `7070` | Port the matchmaking server listens on (`0.0.0.0`) |
+| `--public-ip` | *(auto-detected)* | Public IP returned to clients. Auto-detected via `api.ipify.org` on startup; override if needed |
 | `--max-players` | `8` | Player count threshold — starts a new server when all existing ones are at or above this |
-| `--token-secret` | *(auto-generated)* | Secret for signing join tokens. **Set this explicitly** or tokens will be invalidated on restart |
-| `--indiekku-url` | `http://localhost:3000` | indiekku API URL |
+| `--token-secret` | *(auto-generated)* | HMAC-SHA256 secret for signing join tokens. **Set this explicitly** or tokens will be invalidated on restart |
 
-> `indiekku-match` reads `.indiekku_apikey` automatically from the working directory. Run it from the same directory as `indiekku serve`.
+---
 
-### Endpoints
+## Matchmaking
+
+The matchmaking server runs on port `7070` (`0.0.0.0`) alongside the API. It is internet-facing and handles player match requests, using the indiekku API internally to start and manage game servers.
+
+The matchmaking endpoints are also accessible through the web GUI proxy at `/match-proxy/*` (port `9090`).
+
+### `GET /api/v1/matchmaking/config`
+
+Returns the current matchmaking configuration. Useful for displaying in the web UI or confirming startup settings.
+
+**Headers**
+```
+Authorization: Bearer <api-key>
+```
+
+**Response `200`**
+```json
+{
+  "public_ip": "1.2.3.4",
+  "match_port": "7070",
+  "max_players": 8,
+  "token_secret_status": "configured"
+}
+```
+
+`token_secret_status` is either `"configured"` (flag was set explicitly) or `"auto-generated"`.
+
+---
+
+### Matchmaking Server Endpoints
 
 #### `GET /health`
 
@@ -474,6 +502,29 @@ Authorization: Bearer <api-key>
 ```json
 { "status": "ok" }
 ```
+
+---
+
+#### `GET /servers`
+
+Lists all running game servers with their current player counts.
+
+**Response `200`**
+```json
+{
+  "servers": [
+    {
+      "container_name": "legendary-sword",
+      "port": "7777",
+      "player_count": 3,
+      "started_at": "2025-02-14T15:49:00Z"
+    }
+  ],
+  "count": 1
+}
+```
+
+---
 
 #### `POST /match`
 
@@ -503,6 +554,26 @@ Payload contains `container_name`, `port`, and `exp` (Unix expiry). Validate it 
 
 ---
 
+#### `POST /join/:name`
+
+Validates a join token for the given container and returns the connection address. Call this from your game server to verify the token a client presents on connect.
+
+**Response `200`**
+```json
+{
+  "ip": "1.2.3.4",
+  "port": "7777",
+  "container_name": "legendary-sword"
+}
+```
+
+**Response `401`** — invalid or expired token
+```json
+{ "error": "invalid token" }
+```
+
+---
+
 ## Quick Reference
 
 ### indiekku API (`localhost:3000`)
@@ -524,10 +595,15 @@ Payload contains `container_name`, `port`, and `exp` (Unix expiry). Validate it 
 | `GET` | `/api/v1/dockerfiles/history` | ✓ | — | Dockerfile change history |
 | `GET` | `/api/v1/history/servers` | ✓ | — | Server event history |
 | `GET` | `/api/v1/history/uploads` | ✓ | — | Upload history |
+| `GET` | `/api/v1/matchmaking/config` | ✓ | — | Get matchmaking config |
 
-### indiekku-match (`0.0.0.0:7070`)
+### Matchmaking Server (`0.0.0.0:7070`)
+
+Also accessible via web GUI proxy at `http://<host>:9090/match-proxy/*`.
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | `GET` | `/health` | — | Health check |
+| `GET` | `/servers` | — | List running servers |
 | `POST` | `/match` | — | Request a match, get server address + join token |
+| `POST` | `/join/:name` | — | Validate a join token |

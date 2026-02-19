@@ -22,6 +22,9 @@ var stylesCSS []byte
 //go:embed webui_deploy.html
 var deployHTML []byte
 
+//go:embed webui_match.html
+var matchHTML []byte
+
 //go:embed webui_favicon.svg
 var faviconSVG []byte
 
@@ -48,6 +51,11 @@ func (h *ApiHandler) ServeStyles(c *gin.Context) {
 // ServeDeployUI serves the deploy/new release page
 func (h *ApiHandler) ServeDeployUI(c *gin.Context) {
 	c.Data(http.StatusOK, "text/html; charset=utf-8", deployHTML)
+}
+
+// ServeMatchUI serves the matchmaking settings page
+func (h *ApiHandler) ServeMatchUI(c *gin.Context) {
+	c.Data(http.StatusOK, "text/html; charset=utf-8", matchHTML)
 }
 
 // ServeFavicon serves the favicon
