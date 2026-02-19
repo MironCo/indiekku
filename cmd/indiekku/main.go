@@ -323,7 +323,7 @@ func runServe() {
 	// Start GUI server with self-signed TLS
 	guiRouter := apiHandler.SetupGUIRouter("127.0.0.1:"+*apiPort, "127.0.0.1:"+*matchPort)
 	go func() {
-		cert, err := security.GenerateSelfSignedCert(resolvedIP)
+		cert, err := security.EnsureTLSCert(resolvedIP)
 		if err != nil {
 			fmt.Printf("Warning: Failed to generate TLS cert, falling back to HTTP: %v\n", err)
 			fmt.Printf("Web UI listening on 0.0.0.0:%s (HTTP)\n", defaultGUIPort)
