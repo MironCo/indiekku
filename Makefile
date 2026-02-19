@@ -23,6 +23,7 @@ build:
 	@cp web/history.html internal/api/webui_history.html
 	@cp web/logs.html internal/api/webui_logs.html
 	@cp web/deploy.html internal/api/webui_deploy.html
+	@cp web/match.html internal/api/webui_match.html
 	@cp web/styles.css internal/api/webui_styles.css
 	@cp web/favicon.svg internal/api/webui_favicon.svg
 	@echo "Updating embedded Dockerfile..."

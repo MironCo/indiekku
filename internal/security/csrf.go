@@ -72,6 +72,9 @@ func CSRFMiddleware(manager *CSRFManager) gin.HandlerFunc {
 				c.Abort()
 				return
 			}
+
+			// Invalidate after use so tokens are single-use
+			manager.InvalidateToken(token)
 		}
 
 		c.Next()

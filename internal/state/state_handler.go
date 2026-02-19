@@ -13,6 +13,7 @@ type ServerInfo struct {
 	Command       string    `json:"command,omitempty"`
 	Args          []string  `json:"args,omitempty"`
 	PlayerCount   int       `json:"player_count"`
+	MaxPlayers    int       `json:"max_players,omitempty"`
 	StartedAt     time.Time `json:"started_at"`
 }
 
@@ -85,6 +86,23 @@ func (h *StateHandler) UpdatePlayerCount(containerName string, count int) error 
 		return fmt.Errorf("server not found: %s", containerName)
 	}
 	server.PlayerCount = count
+	return nil
+}
+
+// UpdateServerStatus updates player count and max players from a polled SDK status response.
+// maxPlayers of 0 means the SDK did not report it; the existing value is preserved.
+func (h *StateHandler) UpdateServerStatus(containerName string, playerCount, maxPlayers int) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	server, exists := h.servers[containerName]
+	if !exists {
+		return fmt.Errorf("server not found: %s", containerName)
+	}
+	server.PlayerCount = playerCount
+	if maxPlayers > 0 {
+		server.MaxPlayers = maxPlayers
+	}
 	return nil
 }
 

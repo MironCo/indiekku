@@ -1,8 +1,13 @@
 package main
 
 import (
+	"crypto/rand"
+	"crypto/tls"
+	"encoding/hex"
+	"flag"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"strings"
@@ -12,9 +17,12 @@ import (
 	"indiekku/internal/client"
 	"indiekku/internal/docker"
 	"indiekku/internal/history"
+	"indiekku/internal/matchmaking"
 	"indiekku/internal/security"
 	"indiekku/internal/server"
 	"indiekku/internal/state"
+
+	"github.com/gin-gonic/gin"
 )
 
 var (
@@ -24,6 +32,7 @@ var (
 const (
 	defaultPort    = "7777"
 	defaultAPIPort = "3000"
+	defaultGUIPort = "9090"
 	defaultAPIURL  = "http://localhost:3000"
 	pidFile        = "indiekku.pid"
 )
@@ -63,9 +72,12 @@ func main() {
 func printUsage() {
 	fmt.Println("indiekku - Container orchestration tool")
 	fmt.Println("\nUsage:")
-	fmt.Println("  indiekku serve             Start the API server (runs in background)")
-	fmt.Println("  indiekku shutdown          Stop the API server")
-	fmt.Println("  indiekku logs              View API server logs")
+	fmt.Println("  indiekku serve [flags]     Start the API + matchmaking server (runs in background)")
+	fmt.Println("    --public-ip <ip>         Public IP for matchmaking responses (auto-detected if omitted)")
+	fmt.Println("    --match-port <port>      Matchmaking server port (default: 7070)")
+	fmt.Println("    --token-secret <secret>  HMAC secret for join tokens (auto-generated if omitted)")
+	fmt.Println("  indiekku shutdown          Stop the server")
+	fmt.Println("  indiekku logs              View server logs")
 	fmt.Println("  indiekku logs <server>     View logs for a specific container")
 	fmt.Println("  indiekku start [port]      Start a container")
 	fmt.Println("  indiekku stop <name>       Stop a container")
@@ -112,6 +124,21 @@ func runDockerfiles() {
 	fmt.Println("Use the web UI or API to change the active Dockerfile.")
 }
 
+// detectPublicIP asks ipify for the machine's public IP.
+func detectPublicIP() (string, error) {
+	c := &http.Client{Timeout: 5 * time.Second}
+	resp, err := c.Get("https://api.ipify.org")
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(body)), nil
+}
+
 func runServe() {
 	// Check if Docker is installed
 	if err := docker.CheckDockerInstalled(); err != nil {
@@ -142,41 +169,54 @@ func runServe() {
 		fmt.Println()
 	}
 
-	// Check if this is the forked daemon process (internal flag)
+	// Separate __daemon__ sentinel from real flags before parsing
 	isDaemonProcess := false
-	apiPort := defaultAPIPort
-
-	for i := 2; i < len(os.Args); i++ {
-		if os.Args[i] == "__daemon__" {
+	var filteredArgs []string
+	for _, arg := range os.Args[2:] {
+		if arg == "__daemon__" {
 			isDaemonProcess = true
 		} else {
-			apiPort = os.Args[i]
+			filteredArgs = append(filteredArgs, arg)
 		}
+	}
+
+	fs := flag.NewFlagSet("serve", flag.ContinueOnError)
+	apiPort := fs.String("api-port", defaultAPIPort, "")
+	publicIP := fs.String("public-ip", "", "")
+	matchPort := fs.String("match-port", "7070", "")
+	tokenSecret := fs.String("token-secret", "", "")
+	if err := fs.Parse(filteredArgs); err != nil {
+		fmt.Printf("Error parsing flags: %v\n", err)
+		os.Exit(1)
 	}
 
 	// If this is NOT the daemon process, fork and exit
 	if !isDaemonProcess {
 		// Check if server is already running
 		if _, err := os.Stat(pidFile); err == nil {
-			fmt.Println("Error: API server is already running")
+			fmt.Println("Error: server is already running")
 			fmt.Println("Use 'indiekku shutdown' to stop it first")
 			os.Exit(1)
 		}
 
-		// Get the actual executable path (not from os.Args)
 		execPath, err := os.Executable()
 		if err != nil {
 			fmt.Printf("Failed to get executable path: %v\n", err)
 			os.Exit(1)
 		}
 
-		// Build args using the resolved executable path
-		args := []string{"serve", "__daemon__"}
-		if apiPort != defaultAPIPort {
-			args = append(args, apiPort)
+		// Pass all flags through to the daemon
+		args := []string{"serve", "__daemon__",
+			"--api-port", *apiPort,
+			"--match-port", *matchPort,
+		}
+		if *publicIP != "" {
+			args = append(args, "--public-ip", *publicIP)
+		}
+		if *tokenSecret != "" {
+			args = append(args, "--token-secret", *tokenSecret)
 		}
 
-		// Create log file for daemon output
 		logFile, err := os.OpenFile("indiekku.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 		if err != nil {
 			fmt.Printf("Failed to create log file: %v\n", err)
@@ -193,23 +233,51 @@ func runServe() {
 			os.Exit(1)
 		}
 
-		fmt.Printf("✓ indiekku API server started\n")
-		fmt.Printf("  PID: %d\n", cmd.Process.Pid)
-		fmt.Printf("  Port: %s\n", apiPort)
+		fmt.Printf("✓ indiekku started\n")
+		fmt.Printf("  PID:       %d\n", cmd.Process.Pid)
+		fmt.Printf("  API:       127.0.0.1:%s  (localhost only)\n", *apiPort)
+		fmt.Printf("  Web UI:    https://0.0.0.0:%s  (HTTPS, self-signed cert)\n", defaultGUIPort)
+		fmt.Printf("  Match:     0.0.0.0:%s     (matchmaking)\n", *matchPort)
 		fmt.Printf("\nUse 'indiekku logs' to view logs\n")
 		fmt.Printf("Use 'indiekku shutdown' to stop\n")
 		return
 	}
 
-	// This is the daemon process, start the server
-	fmt.Println("Starting indiekku API server...")
+	// ---- Daemon process ----
+	fmt.Println("Starting indiekku...")
 
-	// Save PID to file
 	pid := os.Getpid()
 	if err := os.WriteFile(pidFile, []byte(fmt.Sprintf("%d", pid)), 0644); err != nil {
 		fmt.Printf("Warning: Failed to write PID file: %v\n", err)
 	}
 	defer os.Remove(pidFile)
+
+	// Resolve public IP
+	resolvedIP := *publicIP
+	if resolvedIP == "" {
+		detected, err := detectPublicIP()
+		if err != nil {
+			fmt.Printf("Warning: could not auto-detect public IP: %v\n", err)
+			fmt.Println("Use --public-ip to set it explicitly.")
+		} else {
+			resolvedIP = detected
+			fmt.Printf("✓ Public IP detected: %s\n", resolvedIP)
+		}
+	} else {
+		fmt.Printf("✓ Public IP: %s (from flag)\n", resolvedIP)
+	}
+
+	// Generate token secret if not provided
+	secret := *tokenSecret
+	if secret == "" {
+		b := make([]byte, 32)
+		if _, err := rand.Read(b); err != nil {
+			fmt.Printf("Failed to generate token secret: %v\n", err)
+			os.Exit(1)
+		}
+		secret = hex.EncodeToString(b)
+		fmt.Println("Warning: --token-secret not set, using random secret (join tokens invalid after restart)")
+	}
 
 	// Load API key for authentication
 	loadedAPIKey, err := security.LoadAPIKey()
@@ -241,12 +309,73 @@ func runServe() {
 		loadedAPIKey,
 	)
 
-	// Setup and run the router
-	router := apiHandler.SetupRouter()
+	// Store matchmaking config for the web UI
+	tokenSecretStatus := "configured"
+	if *tokenSecret == "" {
+		tokenSecretStatus = "auto-generated"
+	}
+	apiHandler.SetMatchConfig(api.MatchConfig{
+		PublicIP:          resolvedIP,
+		MatchPort:         *matchPort,
+		TokenSecretStatus: tokenSecretStatus,
+	})
 
-	fmt.Printf("API server listening on port %s\n", apiPort)
+	// Start GUI server with self-signed TLS
+	guiRouter := apiHandler.SetupGUIRouter("127.0.0.1:"+*apiPort, "127.0.0.1:"+*matchPort)
+	go func() {
+		cert, err := security.EnsureTLSCert(resolvedIP)
+		if err != nil {
+			fmt.Printf("Warning: Failed to generate TLS cert, falling back to HTTP: %v\n", err)
+			fmt.Printf("Web UI listening on 0.0.0.0:%s (HTTP)\n", defaultGUIPort)
+			if err := guiRouter.Run(":" + defaultGUIPort); err != nil {
+				fmt.Printf("Failed to start GUI server: %v\n", err)
+				os.Exit(1)
+			}
+			return
+		}
+		tlsCfg := &tls.Config{Certificates: []tls.Certificate{cert}}
+		ln, err := tls.Listen("tcp", ":"+defaultGUIPort, tlsCfg)
+		if err != nil {
+			fmt.Printf("Failed to start GUI TLS listener: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Web UI listening on 0.0.0.0:%s (HTTPS)\n", defaultGUIPort)
+		srv := &http.Server{Handler: guiRouter}
+		if err := srv.Serve(ln); err != nil {
+			fmt.Printf("Failed to start GUI server: %v\n", err)
+			os.Exit(1)
+		}
+	}()
+
+	// Start matchmaking server
+	indiekkuClient, err := client.NewClient("http://127.0.0.1:" + *apiPort)
+	if err != nil {
+		fmt.Printf("Failed to create internal client for matchmaking: %v\n", err)
+		os.Exit(1)
+	}
+	matchHandler := matchmaking.NewHandler(indiekkuClient, resolvedIP, secret)
+
+	gin.SetMode(gin.ReleaseMode)
+	matchRouter := gin.New()
+	matchRouter.Use(gin.Recovery())
+	matchRouter.GET("/health", matchHandler.Health)
+	matchRouter.GET("/servers", matchHandler.ListServers)
+	matchRouter.POST("/match", matchHandler.Match)
+	matchRouter.POST("/join/:name", matchHandler.Join)
+
+	go func() {
+		fmt.Printf("Matchmaking server listening on 0.0.0.0:%s\n", *matchPort)
+		if err := matchRouter.Run(":" + *matchPort); err != nil {
+			fmt.Printf("Failed to start matchmaking server: %v\n", err)
+			os.Exit(1)
+		}
+	}()
+
+	// Start API server on localhost only
+	router := apiHandler.SetupRouter()
+	fmt.Printf("API server listening on 127.0.0.1:%s\n", *apiPort)
 	fmt.Printf("PID: %d (saved to %s)\n", pid, pidFile)
-	if err := router.Run(":" + apiPort); err != nil {
+	if err := router.Run("127.0.0.1:" + *apiPort); err != nil {
 		fmt.Printf("Failed to start API server: %v\n", err)
 		os.Exit(1)
 	}
