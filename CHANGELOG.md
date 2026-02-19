@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.7.0] - 2025
+
+### Added
+- **Self-Signed TLS for Management GUI** - GUI port (9090) now served over HTTPS with a persisted self-signed certificate; browser warning only shown once
+- **Unity SDK Client** - `IndiekkuClient.cs` with coroutine-based `FindMatch()`, `JoinServer()`, `ListServers()`, and `Ping()` methods for game clients
+- **Unity SDK Server Improvements** - `PlayerJoined()`, `PlayerLeft()`, `PlayerCount`, and `IsFull` helpers for thread-safe player tracking
+- **Unity Preprocessor Guards** - `#if UNITY_DEDICATED_SERVER || UNITY_SERVER` guards on server SDK, negation guards on client SDK
+
+### Changed
+- Removed global `max_players` config from matchmaking UI; max players now handled per-server by the Unity SDK
+
+## [v0.6.0] - 2025
+
+### Added
+- **Matchmaking API** - REST endpoints for server registration, player matchmaking, and JWT join tokens
+- **Match Web UI** - Dedicated matchmaking page showing live server list, configuration, and endpoint copy helper
+- **Match Proxy** - Built-in reverse proxy to the matchmaking server for CORS-free frontend access
+
+### Changed
+- Matchmaking configuration (public IP, port, token secret) surfaced in the Web UI
+
 ## [v0.5.0] - 2024
 
 ### Added
