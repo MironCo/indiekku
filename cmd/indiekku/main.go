@@ -13,14 +13,14 @@ import (
 	"strings"
 	"time"
 
-	"indiekku/internal/api"
-	"indiekku/internal/client"
-	"indiekku/internal/docker"
-	"indiekku/internal/history"
-	"indiekku/internal/matchmaking"
-	"indiekku/internal/security"
-	"indiekku/internal/server"
-	"indiekku/internal/state"
+	"github.com/MironCo/indiekku/internal/api"
+	"github.com/MironCo/indiekku/internal/client"
+	"github.com/MironCo/indiekku/internal/docker"
+	"github.com/MironCo/indiekku/internal/history"
+	"github.com/MironCo/indiekku/internal/matchmaking"
+	"github.com/MironCo/indiekku/internal/security"
+	"github.com/MironCo/indiekku/internal/server"
+	"github.com/MironCo/indiekku/internal/state"
 
 	"github.com/gin-gonic/gin"
 )

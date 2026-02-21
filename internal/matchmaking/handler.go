@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"indiekku/internal/client"
+	"github.com/MironCo/indiekku/internal/client"
 
 	"github.com/gin-gonic/gin"
 )

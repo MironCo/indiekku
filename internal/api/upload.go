@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"strings"
 
-	"indiekku/internal/docker"
-	"indiekku/internal/server"
-	"indiekku/internal/validation"
+	"github.com/MironCo/indiekku/internal/docker"
+	"github.com/MironCo/indiekku/internal/server"
+	"github.com/MironCo/indiekku/internal/validation"
 
 	"github.com/gin-gonic/gin"
 )

@@ -5,8 +5,8 @@ import (
 	"io"
 	"net/http"
 
-	"indiekku/internal/docker"
-	"indiekku/internal/validation"
+	"github.com/MironCo/indiekku/internal/docker"
+	"github.com/MironCo/indiekku/internal/validation"
 
 	"github.com/gin-gonic/gin"
 )

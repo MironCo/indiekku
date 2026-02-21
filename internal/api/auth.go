@@ -4,7 +4,7 @@ import (
 	"crypto/subtle"
 	"net/http"
 
-	"indiekku/internal/security"
+	"github.com/MironCo/indiekku/internal/security"
 
 	"github.com/gin-gonic/gin"
 )

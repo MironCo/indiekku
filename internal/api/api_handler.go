@@ -10,13 +10,13 @@ import (
 	"sync"
 	"time"
 
-	"indiekku/internal/docker"
-	"indiekku/internal/history"
-	"indiekku/internal/namegen"
-	"indiekku/internal/security"
-	"indiekku/internal/server"
-	"indiekku/internal/state"
-	"indiekku/internal/validation"
+	"github.com/MironCo/indiekku/internal/docker"
+	"github.com/MironCo/indiekku/internal/history"
+	"github.com/MironCo/indiekku/internal/namegen"
+	"github.com/MironCo/indiekku/internal/security"
+	"github.com/MironCo/indiekku/internal/server"
+	"github.com/MironCo/indiekku/internal/state"
+	"github.com/MironCo/indiekku/internal/validation"
 
 	"github.com/gin-gonic/gin"
 )

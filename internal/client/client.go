@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"indiekku/internal/security"
+	"github.com/MironCo/indiekku/internal/security"
 )
 
 const (

@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"os"
 
-	"indiekku/internal/client"
-	"indiekku/internal/matchmaking"
-	"indiekku/internal/security"
+	"github.com/MironCo/indiekku/internal/client"
+	"github.com/MironCo/indiekku/internal/matchmaking"
+	"github.com/MironCo/indiekku/internal/security"
 
 	"github.com/gin-gonic/gin"
 )

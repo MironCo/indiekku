@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"indiekku/internal/docker"
+	"github.com/MironCo/indiekku/internal/docker"
 
 	"github.com/gin-gonic/gin"
 )
